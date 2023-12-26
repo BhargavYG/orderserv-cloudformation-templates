@@ -1,0 +1,126 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "AWS CloudFormation Template for Task Definitions",
+    "Parameters":{
+       "Environment": {
+			"Type": "String",
+			"Description": "Enter the environment name as dev/perf/qa/uat/prod/pen",
+			"AllowedValues" : ["dev","perf","qa","uat","prod","pen"],
+			"Default": "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"Tenant": {
+			"Type": "String",
+			"Description": "Enter the tenant/country key",
+			"Default": "os-kfc-jp",
+			"MaxLength": 9,
+			"MinLength": 9
+		},
+		"AppName": {
+			"Type": "String",
+			"Default": "orderserv",
+			"Description": "Application Name"
+		},
+		"TenantRolePolicyStackName" :{
+			"Type": "String",
+            "Description": "Enter the TenantRolePolicyStackName"		
+		},
+		"ECRAcntID" :{
+			"Type": "String",
+            "Description": "Enter the ECR account ID"		
+		}
+    },
+    "Resources":{
+       "orderservcbohpossvctaskdef": {
+            "Type": "AWS::ECS::TaskDefinition",
+            "Properties" : {
+            "TaskRoleArn": { "Fn::ImportValue" : {"Fn::Sub" : "${TenantRolePolicyStackName}-ECSTaskRoleARN"} },
+            "ExecutionRoleArn": { "Fn::ImportValue" : {"Fn::Sub" : "${TenantRolePolicyStackName}-ECSExecutionRoleARN"} },
+            "NetworkMode": "awsvpc",
+			"Cpu" : 1024,
+			"Memory": 2048,
+            "Family": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-orderservcbohpossvc" },  
+            "ContainerDefinitions" : [
+            {
+                "Name": "orderserv-cboh-pos-service",
+                "MountPoints": [],
+                "Image": {
+					"Fn::Sub" : "${ECRAcntID}.dkr.ecr.${AWS::Region}.amazonaws.com/orderserv-cboh-pos-service:dev-au-1.0.43_2021-08-18_13_20_17"
+					},
+                "Cpu": 992,
+				"Environment": [ { "Name": "TenantConfigInvocationSetting__pullData", "Value": "true" },
+								{ "Name": "ASPNETCORE_URLS", "Value": "http://*:9012" }, { "Name": "ASPNETCORE_ENVIRONMENT", "Value": { "Ref": "Environment" } }],
+                "PortMappings":[
+                {
+                    "Protocol": "tcp",
+                    "ContainerPort": 9012,
+                    "HostPort": 9012
+                }
+                ],
+				"Memory":512,
+                "Essential": true,
+                "LogConfiguration": {
+                        "LogDriver": "awslogs",
+                        "Options": {
+                        "awslogs-group": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-ecs" },
+                        "awslogs-region": { "Fn::Sub": "${AWS::Region}"},
+                        "awslogs-stream-prefix": { "Fn::Sub": "orderserv-cboh-pos-service" }
+                        }
+                }
+            },
+			{ "Name": "xray-daemon",
+                "MountPoints": [],
+                "Image": { "Fn::Sub" : "${ECRAcntID}.dkr.ecr.${AWS::Region}.amazonaws.com/aws-xray-daemon:3.3.2" },
+                "Cpu": 32,
+                "PortMappings":[
+                {
+                    "Protocol": "udp",
+                    "ContainerPort": 2000,
+                    "HostPort": 2000
+                }
+                ],
+                "Memory":256,
+                "Essential": true,
+				"WorkingDirectory": "/",
+                "LogConfiguration": {
+                        "LogDriver": "awslogs",
+                        "Options": {
+                        "awslogs-group": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-ecs" },
+                        "awslogs-region": { "Fn::Sub": "${AWS::Region}"},
+                        "awslogs-stream-prefix": "orderserv-cboh-pos-service-xray"
+                        }
+                }
+            }
+            ],
+			"Tags" : [
+				{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-orderservcbohpossvc" } }, 
+				{"Key": "AppName", "Value": { "Ref": "AppName" }},
+				{"Key": "Environment", "Value": { "Ref": "Environment" }},
+				{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+                ],
+            "Volumes": [],
+            "RequiresCompatibilities": [
+                        "FARGATE"
+            ]
+            }
+        }           
+    },
+    "Outputs": {
+		"TaskDefStackName": {
+            "Value": {
+                "Fn::Sub": "${AWS::StackName}"
+            }
+        },
+        "orderservcbohpossvctaskdef": {
+            "Value": {
+                "Ref": "orderservcbohpossvctaskdef"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservcbohpossvctaskdef"
+                }
+            }
+        }
+    }
+}

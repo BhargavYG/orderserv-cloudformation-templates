@@ -1,0 +1,783 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "AWS CloudFormation Template for Master Service Target Groups",
+    "Parameters":{
+        "VpcId":{
+			"Type":"AWS::EC2::VPC::Id",
+			"Description":"Select the VPC"
+        },
+        "Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"Tenant": {
+			"Type": "String",
+			"Description": "Enter the tenant/country key",
+			"Default": "os-kfc-in",
+			"MaxLength": 9,
+			"MinLength": 9
+		},
+		"NestStackBucketName": {
+			"Type": "String",
+			"Default": "orderserv-cloudformation-stack-bucket",
+			"Description": "Name of the S3 bucket where Nest CFTs and Lambda zip files are placed"
+		},
+		"NestStackBucketNameENVPrefix": {
+			"Type": "String",
+			"Default": "DEV",
+			"Description": "Enter the Name of ENV as PROD",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"AppName": {
+			"Type": "String",
+			"Default": "orderserv",
+			"Description": "Application Name"
+		}
+    },
+	"Conditions": {
+        "IsIndTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-in"
+            ]
+        },
+		"IsAusTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-au"
+            ]
+        },
+		"IsNotAusTenant": {
+            "Fn::Not": [{
+               "Fn::Equals" : [
+					{
+						"Ref": "Tenant"
+					},
+					"os-kfc-au"
+            ]
+			}]
+        },
+		"IsJapTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-jp"
+            ]
+        },
+		"IsThaTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-th"
+            ]
+        }
+    },
+    "Resources": {
+        "orderservstoreopsTargetGroup": {
+            "Type" : "AWS::CloudFormation::Stack",
+			"Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservstoreops/Service-TargetGroups.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"VpcId": {
+					"Ref" : "VpcId"
+				},
+				"AppName": {
+					"Ref": "AppName"
+				}
+				}
+			}  
+		},
+		"orderservrecomgmtTargetGroup": {
+            "Type" : "AWS::CloudFormation::Stack",
+			"Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservrecomgmt/Service-TargetGroups.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"VpcId": {
+					"Ref" : "VpcId"
+				},
+				"AppName": {
+					"Ref": "AppName"
+				}
+				}
+			}  
+		},
+		"orderservcustomermgmtTargetGroup": {
+            "Type" : "AWS::CloudFormation::Stack",
+			"Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservcustomermgmt/Service-TargetGroups.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"VpcId": {
+					"Ref" : "VpcId"
+				},
+				"AppName": {
+					"Ref": "AppName"
+				}
+				}
+			}  
+		},
+		"orderservcustomerordhistTargetGroup": {
+            "Type" : "AWS::CloudFormation::Stack",
+			"Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservcustomerordhist/Service-TargetGroups.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"VpcId": {
+					"Ref" : "VpcId"
+				},
+				"AppName": {
+					"Ref": "AppName"
+				}
+				}
+			}  
+		},
+		"orderservordermgmtsvcTargetGroup": {
+            "Type" : "AWS::CloudFormation::Stack",
+			"Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservordermgmtsvc/Service-TargetGroups.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"VpcId": {
+					"Ref" : "VpcId"
+				},
+				"AppName": {
+					"Ref": "AppName"
+				}
+				}
+			}  
+		},
+		"orderservtaxconfigsvcTargetGroup": {
+            "Type" : "AWS::CloudFormation::Stack",
+			"Condition" : "IsIndTenant",
+			"Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservtaxconfigsvc/Service-TargetGroups.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"VpcId": {
+					"Ref" : "VpcId"
+				},
+				"AppName": {
+					"Ref": "AppName"
+				}
+				}
+			}  
+		},
+		"orderservjptaxconfigsvcTargetGroup": {
+            "Type" : "AWS::CloudFormation::Stack",
+			"Condition" : "IsJapTenant",
+			"Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservjptaxconfigsvc/Service-TargetGroups.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"VpcId": {
+					"Ref" : "VpcId"
+				},
+				"AppName": {
+					"Ref": "AppName"
+				}
+				}
+			}  
+		},
+		"orderservbasketmgmtTargetGroup": {
+            "Type" : "AWS::CloudFormation::Stack",
+			"Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservbasketmgmt/Service-TargetGroups.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"VpcId": {
+					"Ref" : "VpcId"
+				},
+				"AppName": {
+					"Ref": "AppName"
+				}
+				}
+			}  
+		},
+		"orderservcoupnwaltmgmtTargetGroup": {
+            "Type" : "AWS::CloudFormation::Stack",
+			"Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservcoupnwaltmgmt/Service-TargetGroups.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"VpcId": {
+					"Ref" : "VpcId"
+				},
+				"AppName": {
+					"Ref": "AppName"
+				}
+				}
+			}  
+		},
+		"orderservmenumasterTargetGroup": {
+            "Type" : "AWS::CloudFormation::Stack",
+			"Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservmenumaster/Service-TargetGroups.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"VpcId": {
+					"Ref" : "VpcId"
+				},
+				"AppName": {
+					"Ref": "AppName"
+				}
+				}
+			}  
+		},
+		"orderservprdtsmgmtTargetGroup": {
+            "Type" : "AWS::CloudFormation::Stack",
+			"Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservprdtsmgmt/Service-TargetGroups.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"VpcId": {
+					"Ref" : "VpcId"
+				},
+				"AppName": {
+					"Ref": "AppName"
+				}
+				}
+			}  
+		},
+		"orderservolouiTargetGroup": {
+            "Type" : "AWS::CloudFormation::Stack",
+			"Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservoloui/Service-TargetGroups.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"VpcId": {
+					"Ref" : "VpcId"
+				},
+				"AppName": {
+					"Ref": "AppName"
+				}
+				}
+			}  
+		},
+		"orderservolointTargetGroup": {
+            "Type" : "AWS::CloudFormation::Stack",
+			"Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservolointegration/Service-TargetGroups.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"VpcId": {
+					"Ref" : "VpcId"
+				},
+				"AppName": {
+					"Ref": "AppName"
+				}
+				}
+			}  
+		},
+		"orderservpaymtsvcTargetGroup": {
+            "Type" : "AWS::CloudFormation::Stack",
+			"Condition" : "IsIndTenant",
+			"Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservpaymtsvc/Service-TargetGroups.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"VpcId": {
+					"Ref" : "VpcId"
+				},
+				"AppName": {
+					"Ref": "AppName"
+				}
+				}
+			}  
+		},
+		"orderservaupaymtsvcTargetGroup": {
+            "Type" : "AWS::CloudFormation::Stack",
+			"Condition" : "IsAusTenant",
+			"Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservaupaymtsvc/Service-TargetGroups.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"VpcId": {
+					"Ref" : "VpcId"
+				},
+				"AppName": {
+					"Ref": "AppName"
+				}
+				}
+			}  
+		},
+		"orderservjppaymtsvcTargetGroup": {
+            "Type" : "AWS::CloudFormation::Stack",
+			"Condition" : "IsJapTenant",
+			"Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservjppaymtsvc/Service-TargetGroups.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"VpcId": {
+					"Ref" : "VpcId"
+				},
+				"AppName": {
+					"Ref": "AppName"
+				}
+				}
+			}  
+		},
+		"orderservthpaymtsvcTargetGroup": {
+            "Type" : "AWS::CloudFormation::Stack",
+			"Condition" : "IsThaTenant",
+			"Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservthpaymtsvc/Service-TargetGroups.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"VpcId": {
+					"Ref" : "VpcId"
+				},
+				"AppName": {
+					"Ref": "AppName"
+				}
+				}
+			}  
+		},
+		"orderservgiftcardsvcTargetGroup": {
+            "Type" : "AWS::CloudFormation::Stack",
+			"Condition" : "IsIndTenant",
+			"Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservgiftcardsvc/Service-TargetGroups.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"VpcId": {
+					"Ref" : "VpcId"
+				},
+				"AppName": {
+					"Ref": "AppName"
+				}
+				}
+			}  
+		},
+		"orderservjpgiftcardsvcTargetGroup": {
+            "Type" : "AWS::CloudFormation::Stack",
+			"Condition" : "IsJapTenant",
+			"Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservgiftcardsvc/Service-TargetGroups.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"VpcId": {
+					"Ref" : "VpcId"
+				},
+				"AppName": {
+					"Ref": "AppName"
+				}
+				}
+			}  
+		},
+		"orderservpromtnwebapiTargetGroup": {
+            "Type" : "AWS::CloudFormation::Stack",
+			"Condition" : "IsNotAusTenant",
+			"Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservpromtnwebapi/Service-TargetGroups.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"VpcId": {
+					"Ref" : "VpcId"
+				},
+				"AppName": {
+					"Ref": "AppName"
+				}
+				}
+			}  
+		},
+		"orderservcustorchestrtnTargetGroup": {
+            "Type" : "AWS::CloudFormation::Stack",
+			"Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservcustorchestrtn/Service-TargetGroups.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"VpcId": {
+					"Ref" : "VpcId"
+				},
+				"AppName": {
+					"Ref": "AppName"
+				}
+				}
+			}  
+		},
+		"orderservgstcustmgmtTargetGroup": {
+            "Type" : "AWS::CloudFormation::Stack",
+			"Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservgstcustmgmt/Service-TargetGroups.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"VpcId": {
+					"Ref" : "VpcId"
+				},
+				"AppName": {
+					"Ref": "AppName"
+				}
+				}
+			}  
+		},
+		"orderservcallcenterTargetGroup": {
+            "Type" : "AWS::CloudFormation::Stack",
+			"Condition" : "IsIndTenant",
+			"Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservcallcenter/Service-TargetGroups.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"VpcId": {
+					"Ref" : "VpcId"
+				},
+				"AppName": {
+					"Ref": "AppName"
+				}
+				}
+			}  
+		}
+	},
+	"Outputs": {
+		"ServiceTargetGroupStackName": {
+			"Description": "ServiceTargetGroupStackName",
+            "Value": {
+                "Fn::Sub": "${AWS::StackName}"
+            }
+        },
+		"orderservstoreopsTargetGroup": {
+			"Value" : { "Fn::GetAtt" : [ "orderservstoreopsTargetGroup", "Outputs.orderservstoreopsTargetGroup" ] },
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-orderservstoreopsTargetGroup"
+				}
+			}
+		},
+		"orderservrecomgmtTargetGroup": {
+			"Value" : { "Fn::GetAtt" : [ "orderservrecomgmtTargetGroup", "Outputs.orderservrecomgmtTargetGroup" ] },
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-orderservrecomgmtTargetGroup"
+				}
+			}
+		},
+		"orderservcustomermgmtTargetGroup": {
+			"Value" : { "Fn::GetAtt" : [ "orderservcustomermgmtTargetGroup", "Outputs.orderservcustomermgmtTargetGroup" ] },
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-orderservcustomermgmtTargetGroup"
+				}
+			}
+		},
+		"orderservcustomerordhistTargetGroup": {
+			"Value" : { "Fn::GetAtt" : [ "orderservcustomerordhistTargetGroup", "Outputs.orderservcustomerordhistTargetGroup" ] },
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-orderservcustomerordhistTargetGroup"
+				}
+			}
+		},
+		"orderservordermgmtsvcTargetGroup": {
+			"Value" : { "Fn::GetAtt" : [ "orderservordermgmtsvcTargetGroup", "Outputs.orderservordermgmtsvcTargetGroup" ] },
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-orderservordermgmtsvcTargetGroup"
+				}
+			}
+		},
+		"orderservtaxconfigsvcTargetGroup": {
+			"Condition" : "IsIndTenant",
+			"Value" : { "Fn::GetAtt" : [ "orderservtaxconfigsvcTargetGroup", "Outputs.orderservtaxconfigsvcTargetGroup" ] },
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-orderservtaxconfigsvcTargetGroup"
+				}
+			}
+		},
+		"orderservjptaxconfigsvcTargetGroup": {
+			"Condition" : "IsJapTenant",
+			"Value" : { "Fn::GetAtt" : [ "orderservjptaxconfigsvcTargetGroup", "Outputs.orderservjptaxconfigsvcTargetGroup" ] },
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-orderservjptaxconfigsvcTargetGroup"
+				}
+			}
+		},
+		"orderservbasketmgmtTargetGroup": {
+			"Value" : { "Fn::GetAtt" : [ "orderservbasketmgmtTargetGroup", "Outputs.orderservbasketmgmtTargetGroup" ] },
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-orderservbasketmgmtTargetGroup"
+				}
+			}
+		},
+		"orderservcoupnwaltmgmtTargetGroup": {
+			"Value" : { "Fn::GetAtt" : [ "orderservcoupnwaltmgmtTargetGroup", "Outputs.orderservcoupnwaltmgmtTargetGroup" ] },
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-orderservcoupnwaltmgmtTargetGroup"
+				}
+			}
+		},
+		"orderservmenumasterTargetGroup": {
+			"Value" : { "Fn::GetAtt" : [ "orderservmenumasterTargetGroup", "Outputs.orderservmenumasterTargetGroup" ] },
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-orderservmenumasterTargetGroup"
+				}
+			}
+		},
+		"orderservprdtsmgmtTargetGroup": {
+			"Value" : { "Fn::GetAtt" : [ "orderservprdtsmgmtTargetGroup", "Outputs.orderservprdtsmgmtTargetGroup" ] },
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-orderservprdtsmgmtTargetGroup"
+				}
+			}
+		},
+		"orderservolouiTargetGroup": {
+			"Value" : { "Fn::GetAtt" : [ "orderservolouiTargetGroup", "Outputs.orderservolouiTargetGroup" ] },
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-orderservolouiTargetGroup"
+				}
+			}
+		},
+		"orderservolointTargetGroup": {
+			"Value" : { "Fn::GetAtt" : [ "orderservolointTargetGroup", "Outputs.orderservolointTargetGroup" ] },
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-orderservolointTargetGroup"
+				}
+			}
+		},
+		"orderservpaymtsvcTargetGroup": {
+			"Condition" : "IsIndTenant",
+			"Value" : { "Fn::GetAtt" : [ "orderservpaymtsvcTargetGroup", "Outputs.orderservpaymtsvcTargetGroup" ] },
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-orderservpaymtsvcTargetGroup"
+				}
+			}
+		},
+		"orderservaupaymtsvcTargetGroup": {
+			"Condition" : "IsAusTenant",
+			"Value" : { "Fn::GetAtt" : [ "orderservaupaymtsvcTargetGroup", "Outputs.orderservaupaymtsvcTargetGroup" ] },
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-orderservaupaymtsvcTargetGroup"
+				}
+			}
+		},
+		"orderservjppaymtsvcTargetGroup": {
+			"Condition" : "IsJapTenant",
+			"Value" : { "Fn::GetAtt" : [ "orderservjppaymtsvcTargetGroup", "Outputs.orderservjppaymtsvcTargetGroup" ] },
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-orderservjppaymtsvcTargetGroup"
+				}
+			}
+		},
+		"orderservthpaymtsvcTargetGroup": {
+			"Condition" : "IsThaTenant",
+			"Value" : { "Fn::GetAtt" : [ "orderservthpaymtsvcTargetGroup", "Outputs.orderservthpaymtsvcTargetGroup" ] },
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-orderservthpaymtsvcTargetGroup"
+				}
+			}
+		},
+		"orderservgiftcardsvcTargetGroup": {
+			"Condition" : "IsIndTenant",
+			"Value" : { "Fn::GetAtt" : [ "orderservgiftcardsvcTargetGroup", "Outputs.orderservgiftcardsvcTargetGroup" ] },
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-orderservgiftcardsvcTargetGroup"
+				}
+			}
+		},
+		"orderservjpgiftcardsvcTargetGroup": {
+			"Condition" : "IsJapTenant",
+			"Value" : { "Fn::GetAtt" : [ "orderservjpgiftcardsvcTargetGroup", "Outputs.orderservjpgiftcardsvcTargetGroup" ] },
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-orderservgiftcardsvcTargetGroup"
+				}
+			}
+		},
+		"orderservpromtnwebapiTargetGroup": {
+			"Condition" : "IsNotAusTenant",
+			"Value" : { "Fn::GetAtt" : [ "orderservpromtnwebapiTargetGroup", "Outputs.orderservpromtnwebapiTargetGroup" ] },
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-orderservpromtnwebapiTargetGroup"
+				}
+			}
+		},
+		"orderservcustorchestrtnTargetGroup": {
+			"Value" : { "Fn::GetAtt" : [ "orderservcustorchestrtnTargetGroup", "Outputs.orderservcustorchestrtnTargetGroup" ] },
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-orderservcustorchestrtnTargetGroup"
+				}
+			}
+		},
+		"orderservgstcustmgmtTargetGroup": {
+			"Value" : { "Fn::GetAtt" : [ "orderservgstcustmgmtTargetGroup", "Outputs.orderservgstcustmgmtTargetGroup" ] },
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-orderservgstcustmgmtTargetGroup"
+				}
+			}
+		},
+		"orderservcallcenterTargetGroup": {
+			"Condition" : "IsIndTenant",
+			"Value" : { "Fn::GetAtt" : [ "orderservcallcenterTargetGroup", "Outputs.orderservcallcenterTargetGroup" ] },
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-orderservcallcenterTargetGroup"
+				}
+			}
+		}
+    }
+}

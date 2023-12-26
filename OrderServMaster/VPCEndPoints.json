@@ -1,0 +1,56 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description" :  "Stack to create VPC Endpoint with DynamoDB Table",
+    "Parameters":{
+		"VPC01":{
+            "Type":"AWS::EC2::VPC::Id",
+            "Description":"Select the VPC"
+        },
+		"PrivateRouteTable01":{
+            "Type": "String",
+            "Description": "Enter the Private Route Table 01"
+        },
+		"PrivateRouteTable02":{
+            "Type": "String",
+            "Description": "Enter the Private Route Table 02"
+        },
+		"VPCESecurityGroup":{
+			"Type": "String",
+            "Description": "Enter the VPC End Point SecurityGroup"
+		},
+		"AppSubnet01":{
+            "Type": "String",
+            "Description": "Enter the AppSubnet01"
+        },
+		"AppSubnet02":{
+			"Type": "String",
+            "Description": "Enter the AppSubnet02"
+		}		
+	},
+	"Resources": {
+        "VPCEndPointDynamoDB" : {
+		  "Type" : "AWS::EC2::VPCEndpoint",
+		  "Properties" : {
+			  "RouteTableIds" : [ {"Ref" : "PrivateRouteTable01" },{"Ref" : "PrivateRouteTable02" }],
+			  "ServiceName" : {
+                            "Fn::Sub" : "com.amazonaws.${AWS::Region}.dynamodb"
+                        },
+			  "VpcEndpointType" : "Gateway",
+			  "VpcId" : { "Ref" : "VPC01" }
+			}
+		},
+		"VPCEndPointAPIGW" : {
+		  "Type" : "AWS::EC2::VPCEndpoint",
+		  "Properties" : {
+			  "PrivateDnsEnabled" : true,
+			  "SubnetIds" : [{"Ref" : "AppSubnet01" },{"Ref" : "AppSubnet02" }],
+			  "SecurityGroupIds" : [ {"Ref" : "VPCESecurityGroup"}],
+			  "ServiceName" : {
+                            "Fn::Sub" : "com.amazonaws.${AWS::Region}.execute-api"
+                        },
+			  "VpcEndpointType" : "Interface",
+			  "VpcId" : { "Ref" : "VPC01" }
+			}
+		}
+	}
+}

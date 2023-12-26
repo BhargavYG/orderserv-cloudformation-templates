@@ -1,0 +1,243 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "AWS CloudFormation Template for ECS Services",
+    "Parameters": {
+        "TGStackName": {
+            "Type": "String",
+            "Description": "Enter the Stack Name of Service-TargetGroups"
+        },
+        "TDStackname":{
+            "Type": "String",
+			"Description": "Enter the Stack Name of Task Definitions"
+        },
+		"PrivateSubnet01": {
+            "Type": "String",
+            "Description": "Enter the Private Subnet 01 ID"
+        },
+		"PrivateSubnet02": {
+            "Type": "String",
+            "Description": "Enter the Private Subnet 02 ID"
+        },
+		"ECSSecurityGroup": {
+            "Type": "String",
+            "Description": "Enter the ECS Security Group"
+        },
+		"Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/prod",
+			"AllowedValues" : ["dev","perf","qa","uat","prod","pen"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"Tenant": {
+			"Type": "String",
+			"Description": "Enter the tenant/country key",
+			"Default": "os-kfc-th",
+			"MaxLength": 9,
+			"MinLength": 9
+		},
+		"AppName": {
+			"Type": "String",
+			"Default": "orderserv",
+			"Description": "Application Name"
+		},
+		"ECSClusterName": {
+            "Type": "String",
+            "Description": "Enter the Name of ECS Cluster"
+        },
+		"TenantRolePolicyStackName" :{
+			"Type": "String",
+            "Description": "Enter the TenantRolePolicyStackName"		
+		},
+		"NamespaceId" :{
+			"Type": "String",
+            "Description": "Enter the private DNS Namespace Id"		
+		},
+		"AppMeshName" :{
+			"Type": "String",
+            "Description": "Enter the name of App Mesh"		
+		}
+    },
+    "Resources": {
+        "orderservthpaymtsvcECSService": {
+            "Type": "AWS::ECS::Service",
+			"DependsOn": ["orderservthpaymtsvcServiceDiscovery"],
+            "Properties": {
+                "Cluster": {
+                    "Fn::Sub": "arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:cluster/${ECSClusterName}"
+                },
+				"NetworkConfiguration" : {
+					"AwsvpcConfiguration" : {
+						"AssignPublicIp" : "DISABLED",
+						"Subnets":[{"Ref" : "PrivateSubnet01"},{"Ref" : "PrivateSubnet02"}],
+						"SecurityGroups":[{"Ref" : "ECSSecurityGroup"}]
+					}
+				},
+                "LaunchType": "FARGATE",
+                "DeploymentConfiguration": {
+                    "MaximumPercent": 200,
+                    "MinimumHealthyPercent": 100
+                },
+                "DesiredCount": 1,
+                "LoadBalancers": [{
+                    "ContainerName": "orderserv-th-payment-service",
+                    "ContainerPort": 9014,
+                    "TargetGroupArn": {
+                        "Fn::ImportValue": {
+                            "Fn::Sub": "${TGStackName}-orderservthpaymtsvcTargetGroup"
+                        }
+                    }
+                }],
+                "SchedulingStrategy": "REPLICA",
+                "ServiceName": "orderserv-th-payment-service-service",
+                "TaskDefinition": {
+                    "Fn::ImportValue" : {"Fn::Sub" : "${TDStackname}-orderservthpaymtsvctaskdef"}
+                },
+				"ServiceRegistries": [{
+                    "ContainerName": "orderserv-th-payment-service",
+                    "ContainerPort": 9014,
+                    "RegistryArn": {
+                        "Fn::GetAtt": ["orderservthpaymtsvcServiceDiscovery", "Arn"]
+                    }
+                }],
+				"PropagateTags" : "SERVICE",
+				"Tags" : [
+						{"Key": "Name", "Value": "orderserv-th-payment-service-service" }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+                ]
+            }
+        },
+		"orderservthpaymtsvcECSServiceScalingTarget":{
+            "Type":"AWS::ApplicationAutoScaling::ScalableTarget",
+            "DependsOn":"orderservthpaymtsvcECSService",
+            "Properties":{
+                "MaxCapacity":1,
+                "MinCapacity":1,
+                "ResourceId":{ "Fn::Join":[ "", [ "service/", { "Ref":"ECSClusterName" } , "/", { "Fn::GetAtt":[ "orderservthpaymtsvcECSService", "Name" ] } ] ] },
+                "RoleARN": {
+					"Fn::ImportValue" : {"Fn::Sub" : "${TenantRolePolicyStackName}-ECSAutoScalingRoleARN"}
+					},
+                "ScalableDimension":"ecs:service:DesiredCount",
+                "ServiceNamespace":"ecs"
+            }
+        },
+        "orderservthpaymtsvcECSSServiceScalingPolicy":{
+            "Type":"AWS::ApplicationAutoScaling::ScalingPolicy",
+            "DependsOn":"orderservthpaymtsvcECSServiceScalingTarget",
+            "Properties":{
+                "PolicyName": { 
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-orderservthpaymtsvc-cpu-asp"
+                }, 
+                "PolicyType":"TargetTrackingScaling",
+                "ScalingTargetId":{
+                    "Ref": "orderservthpaymtsvcECSServiceScalingTarget"
+                },
+                "TargetTrackingScalingPolicyConfiguration":{
+                    "PredefinedMetricSpecification" : {
+                        "PredefinedMetricType" : "ECSServiceAverageCPUUtilization"
+                    },
+                    "ScaleInCooldown" : 300,
+                    "ScaleOutCooldown" : 300,
+                    "TargetValue" : 70
+                }
+            }
+        },
+		"orderservthpaymtsvcServiceDiscovery": {
+            "Type": "AWS::ServiceDiscovery::Service",
+            "Properties": {
+                "Name": {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-thpaymtsvc"
+                },
+                "Description": "Jap Payment Service Service Discovery",
+                "DnsConfig": {
+                    "DnsRecords": [{
+                        "Type": "SRV",
+                        "TTL": 60
+                    }],
+                    "NamespaceId": {"Ref" : "NamespaceId"}
+                },
+                "HealthCheckCustomConfig" : {"FailureThreshold" : 1},
+				"Tags" : [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-thpaymtsvc" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+                ]
+            }
+        },
+		"orderservthpaymtsvcAppMeshNode":{
+			"Type": "AWS::AppMesh::VirtualNode",
+			"DependsOn" : "orderservthpaymtsvcServiceDiscovery",
+			"Properties": {
+				"MeshName": {"Ref" : "AppMeshName"},
+				"VirtualNodeName": {"Fn::Sub" : "orderserv-${Environment}-${Tenant}-thpaymtsvc-node"},
+				"Spec": {
+				  "BackendDefaults": {
+					"ClientPolicy": {}
+				  },
+				  "Backends": [],
+				  "Listeners": [
+					{
+					  "PortMapping": {
+						"Port": 9014,
+						"Protocol": "http"
+					  }
+					}
+				  ],
+				  "Logging": {},
+				  "ServiceDiscovery": {
+					"DNS": {
+					  "Hostname": {
+					   "Fn::Join": [
+							".",
+							[{"Fn::GetAtt": ["orderservthpaymtsvcServiceDiscovery", "Name"]},{"Fn::Sub" : "orderserv-${Environment}-${Tenant}-pvt-dns-ns"}]
+						]
+					  }
+					}
+				  }
+				},
+				"Tags" : [
+						{"Key": "Name", "Value": {"Fn::Sub" : "orderserv-${Environment}-${Tenant}-thpaymtsvc-node"} }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+                ]
+			  }
+		},
+		"orderservthpaymtsvcAppMeshService":{
+			"DependsOn" : "orderservthpaymtsvcAppMeshNode",
+			"Type": "AWS::AppMesh::VirtualService",
+			  "Properties": {
+				"MeshName": {"Ref" : "AppMeshName"},
+				"VirtualServiceName":{
+					   "Fn::Join": [
+							".",
+							[{"Fn::GetAtt": ["orderservthpaymtsvcServiceDiscovery", "Name"]},{"Fn::Sub" : "orderserv-${Environment}-${Tenant}-pvt-dns-ns"}]
+						]
+					  },
+				"Spec": {
+				  "Provider": {
+					"VirtualNode": {
+					  "VirtualNodeName": {"Fn::GetAtt": ["orderservthpaymtsvcAppMeshNode", "VirtualNodeName"]}
+					}
+				  }
+				},
+				"Tags" : [
+						{"Key": "Name", "Value": {
+							"Fn::Join": [
+							".",
+								[{"Fn::GetAtt": ["orderservthpaymtsvcServiceDiscovery", "Name"]},
+								{"Fn::Sub" : "orderserv-${Environment}-${Tenant}-pvt-dns-ns"}]
+								]} 
+						}, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+                ]
+			}
+		}
+	}
+}

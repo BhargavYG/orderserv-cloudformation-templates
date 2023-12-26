@@ -1,0 +1,159 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "AWS CloudFormation Template for ECS Services",
+    "Parameters": {
+        "TGStackName": {
+            "Type": "String",
+            "Description": "Enter the Stack Name of Service-TargetGroups"
+        },
+        "TDStackname":{
+            "Type": "String",
+			"Description": "Enter the Stack Name of Task Definitions"
+        },
+		"PrivateSubnet01": {
+            "Type": "String",
+            "Description": "Enter the Private Subnet 01 ID"
+        },
+		"PrivateSubnet02": {
+            "Type": "String",
+            "Description": "Enter the Private Subnet 02 ID"
+        },
+		"ECSSecurityGroup": {
+            "Type": "String",
+            "Description": "Enter the ECS Security Group"
+        },
+		"Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/perf/qa/uat/prod/pen",
+			"AllowedValues" : ["dev","perf","qa","uat","prod","pen"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"Tenant": {
+			"Type": "String",
+			"Description": "Enter the tenant/country key",
+			"Default": "os-kfc-jp",
+			"MaxLength": 9,
+			"MinLength": 9
+		},
+		"AppName": {
+			"Type": "String",
+			"Default": "orderserv",
+			"Description": "Application Name"
+		},
+		"ECSClusterName": {
+            "Type": "String",
+            "Description": "Enter the Name of ECS Cluster"
+        },
+		"TenantRolePolicyStackName" :{
+			"Type": "String",
+            "Description": "Enter the TenantRolePolicyStackName"		
+		},
+		"NamespaceId" :{
+			"Type": "String",
+            "Description": "Enter the rpivate DNS Namespace Id"		
+		}
+    },
+    "Resources": {
+        "orderservcbohpossvcECSService": {
+            "Type": "AWS::ECS::Service",
+			"DependsOn": ["orderservcbohpossvcServiceDiscovery"],
+            "Properties": {
+                "Cluster": {
+                    "Fn::Sub": "arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:cluster/${ECSClusterName}"
+                },
+				"NetworkConfiguration" : {
+					"AwsvpcConfiguration" : {
+						"AssignPublicIp" : "DISABLED",
+						"Subnets":[{"Ref" : "PrivateSubnet01"},{"Ref" : "PrivateSubnet02"}],
+						"SecurityGroups":[{"Ref" : "ECSSecurityGroup"}]
+					}
+				},
+                "LaunchType": "FARGATE",
+                "DeploymentConfiguration": {
+                    "MaximumPercent": 200,
+                    "MinimumHealthyPercent": 100
+                },
+                "DesiredCount": 1,
+                "SchedulingStrategy": "REPLICA",
+                "ServiceName": "orderserv-cboh-pos-service-service",
+                "TaskDefinition": {
+                    "Fn::ImportValue" : {"Fn::Sub" : "${TDStackname}-orderservcbohpossvctaskdef"}
+                },
+				"ServiceRegistries": [{
+                    "ContainerName": "orderserv-cboh-pos-service",
+                    "ContainerPort": 9012,
+                    "RegistryArn": {
+                        "Fn::GetAtt": ["orderservcbohpossvcServiceDiscovery", "Arn"]
+                    }
+                }],
+				"PropagateTags" : "SERVICE",
+				"Tags" : [
+					{"Key": "Name", "Value": "orderserv-cboh-pos-service-service" }, 
+					{"Key": "AppName", "Value":{ "Ref": "AppName" }},
+					{"Key": "Environment", "Value": { "Ref": "Environment" }},
+					{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+						]
+            }
+        },
+		"orderservcbohpossvcECSServiceScalingTarget":{
+            "Type":"AWS::ApplicationAutoScaling::ScalableTarget",
+            "DependsOn":"orderservcbohpossvcECSService",
+            "Properties":{
+                "MaxCapacity":1,
+                "MinCapacity":1,
+                "ResourceId":{ "Fn::Join":[ "", [ "service/", { "Ref":"ECSClusterName" } , "/", { "Fn::GetAtt":[ "orderservcbohpossvcECSService", "Name" ] } ] ] },
+                "RoleARN": {
+					"Fn::ImportValue" : {"Fn::Sub" : "${TenantRolePolicyStackName}-ECSAutoScalingRoleARN"}
+					},
+                "ScalableDimension":"ecs:service:DesiredCount",
+                "ServiceNamespace":"ecs"
+            }
+        },
+        "orderservcbohpossvcECSServiceScalingPolicy":{
+            "Type":"AWS::ApplicationAutoScaling::ScalingPolicy",
+            "DependsOn":"orderservcbohpossvcECSServiceScalingTarget",
+            "Properties":{
+                "PolicyName": { 
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-orderservcbohpossvc-cpu-asp"
+                }, 
+                "PolicyType":"TargetTrackingScaling",
+                "ScalingTargetId":{
+                    "Ref": "orderservcbohpossvcECSServiceScalingTarget"
+                },
+                "TargetTrackingScalingPolicyConfiguration":{
+                    "PredefinedMetricSpecification" : {
+                        "PredefinedMetricType" : "ECSServiceAverageCPUUtilization"
+                    },
+                    "ScaleInCooldown" : 300,
+                    "ScaleOutCooldown" : 300,
+                    "TargetValue" : 300
+                }
+            }
+        },
+		"orderservcbohpossvcServiceDiscovery": {
+            "Type": "AWS::ServiceDiscovery::Service",
+            "Properties": {
+                "Name": {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-cbohpossvc"
+                },
+                "Description": "Cboh Pos Service GRPC Service Discovery",
+                "DnsConfig": {
+                    "DnsRecords": [{
+                        "Type": "SRV",
+                        "TTL": 60
+                    }],
+                    "NamespaceId": {"Ref" : "NamespaceId"}
+                },
+                "HealthCheckCustomConfig" : {"FailureThreshold" : 1},
+				"Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-cbohpossvc" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+                ]
+            }
+        }
+	}
+}

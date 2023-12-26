@@ -1,0 +1,1190 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Resources": {
+    "S3Bucket": {
+      "DeletionPolicy": "Delete",
+      "Type": "AWS::S3::Bucket",
+      "Description": "Creating Amazon S3 bucket for AWS CodePipeline artifacts",
+      "Properties": {
+        "BucketName": {
+          "Fn::Join": [
+            "-",
+            [
+			  "orderserv",
+              {
+                "Ref": "AWS::Region"
+              },
+              {
+                "Ref": "AppName"
+              },
+              "pipe"
+            ]
+          ]
+        },
+		"PublicAccessBlockConfiguration" : {
+			"BlockPublicAcls" : true,
+			"BlockPublicPolicy" : true,
+			"IgnorePublicAcls" : true,
+			"RestrictPublicBuckets" : true
+		},
+		"BucketEncryption": { 
+			"ServerSideEncryptionConfiguration": [ 
+				{ 
+					"ServerSideEncryptionByDefault": 
+					{	 
+						"SSEAlgorithm": "AES256" 
+					} 
+				} 
+			] 
+		},
+        "Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${AWS::Region}-${AppName}-pipe" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }}
+				]
+      }
+    },
+    "PermissionsBoundaryPolicy": {
+      "Type": "AWS::IAM::ManagedPolicy",
+      "Description": "Creating an IAM managed policy for defining the permissions boundary for an AWS Lambda App",
+      "Properties": {
+        "ManagedPolicyName": {
+          "Fn::Sub": "${AppName}-PermissionsBoundary"
+        },
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Action": [
+                "*"
+              ],
+              "Resource": {
+				"Fn::Join" : ["",
+					[{"Fn::Sub": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:"},
+					{"Ref" : "AppName"},
+					"*"]]					
+              },
+              "Effect": "Allow",
+              "Sid": "StackResources"
+            },
+            {
+              "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:DescribeLogGroups",
+                "logs:PutLogEvents",
+                "xray:Put*",
+				"iam:TagRole"				
+              ],
+              "Resource":"*" ,
+              "Effect": "Allow",
+              "Sid": "StaticPermissions"
+            },
+			{
+                  "Action": [
+                    "s3:CreateBucket",
+                    "s3:DeleteBucket",
+                    "s3:DeleteBucketWebsite",
+                    "s3:PutAccelerateConfiguration",
+                    "s3:PutAnalyticsConfiguration",
+                    "s3:PutBucketAcl",
+                    "s3:PutBucketCORS",
+                    "s3:PutBucketLogging",
+                    "s3:PutBucketNotification",
+                    "s3:PutBucketPublicAccessBlock",
+                    "s3:PutBucketVersioning",
+                    "s3:PutBucketWebsite",
+                    "s3:PutEncryptionConfiguration",
+                    "s3:PutInventoryConfiguration",
+                    "s3:PutLifecycleConfiguration",
+                    "s3:PutMetricsConfiguration",
+                    "s3:PutReplicationConfiguration",
+					"s3:PutBucketTagging",
+					"s3:PutObject",
+					"s3:GetObject"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow"
+                },
+			
+			{
+                "Action": [
+                "servicediscovery:*"
+                ],
+                "Resource": "*",
+                "Effect": "Allow"
+            },
+			{
+              "Action": [
+				"ec2:CreateNetworkInterfacePermission",
+                "ec2:CreateNetworkInterface",
+                "ec2:DescribeNetworkInterfaces",
+                "ec2:DeleteNetworkInterface",
+				"ec2:DeleteNetworkInterfacePermission"
+              ],
+              "Resource": "*",
+              "Effect": "Allow"
+            },
+            {
+              "Action": "*",
+              "Resource": "*",
+              "Effect": "Allow",
+              "Condition": {
+                "StringEquals": {
+                  "aws:RequestTag/aws:cloudformation:stack-name": [
+                    {
+                      "Ref": "AppName"
+                    }
+                  ]
+                },
+                "ForAllValues:StringEquals": {
+                  "aws:TagKeys": "aws:cloudformation:stack-name"
+                }
+              },
+              "Sid": "StackResourcesTagging"
+            }			
+          ]
+        },
+        "Description": "IAM policy to define the permissions boundary for IAM entities created in an AWS Lambda App"
+      }
+    },
+    "CloudFormationRole": {
+      "Type": "AWS::IAM::Role",
+      "Description": "Service role in IAM for AWS CloudFormation",
+      "Properties": {
+        "RoleName": {
+          "Fn::Sub": "${AppName}-CloudFormationRole"
+        },
+        "Path": "/",
+        "Policies": [
+          {
+            "PolicyName": "WorkerCloudFormationRolePolicy",
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Action": [
+                    "s3:GetObject",
+                    "s3:GetObjectVersion"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Sub": "arn:aws:s3:::${S3Bucket}"
+                    },
+                    {
+                      "Fn::Sub": "arn:aws:s3:::${S3Bucket}/*"
+                    }
+                  ],
+                  "Effect": "Allow"
+                },
+                {
+                  "Action": [
+                    "lambda:CreateAlias",
+                    "lambda:CreateFunction",
+                    "lambda:DeleteAlias",
+                    "lambda:DeleteFunction",
+                    "lambda:DeleteFunctionConcurrency",
+                    "lambda:DeleteLayerVersion",
+                    "lambda:DeleteProvisionedConcurrencyConfig",
+                    "lambda:GetEventSourceMapping",
+                    "lambda:GetFunction",
+                    "lambda:GetFunctionConfiguration",
+                    "lambda:GetLayerVersion",
+                    "lambda:ListTags",
+                    "lambda:ListVersionsByFunction",
+                    "lambda:PublishLayerVersion",
+                    "lambda:PublishVersion",
+                    "lambda:PutFunctionConcurrency",
+                    "lambda:PutProvisionedConcurrencyConfig",
+                    "lambda:TagResource",
+                    "lambda:UntagResource",
+                    "lambda:UpdateAlias",
+                    "lambda:UpdateFunctionCode",
+                    "lambda:UpdateFunctionConfiguration",
+					"lambda:AddPermission"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow"
+                },
+                {
+                  "Action": [
+                    "lambda:AddPermission",
+                    "lambda:DeleteFunctionEventInvokeConfig",
+                    "lambda:InvokeFunction",
+                    "lambda:PutFunctionEventInvokeConfig",
+                    "lambda:RemovePermission",
+                    "lambda:UpdateFunctionEventInvokeConfig"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AppName}-*"
+                  },
+                  "Effect": "Allow"
+                },
+                {
+                  "Action": [
+                    "lambda:CreateEventSourceMapping",
+                    "lambda:DeleteEventSourceMapping",
+                    "lambda:UpdateEventSourceMapping"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow",
+                  "Condition": {
+                    "ArnEquals": {
+                      "lambda:FunctionArn": {
+                        "Fn::Sub": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AppName}-*"
+                      }
+                    }
+                  }
+                },
+                {
+                  "Action": [
+                    "lambda:AddLayerVersionPermission",
+                    "lambda:RemoveLayerVersionPermission"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:layer:${AppName}-*"
+                  },
+                  "Effect": "Allow"
+                },                
+               
+                {
+                  "Action": [
+                    "events:DeleteRule",
+                    "events:DescribeRule",
+                    "events:ListTagsForResource",
+                    "events:PutRule",
+                    "events:PutTargets",
+                    "events:PutPermission",
+                    "events:RemoveTargets",
+                    "events:RemovePermission",
+                    "events:TagResource",
+                    "events:UntagResource"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow"
+                },
+                {
+                  "Action": [
+                    "s3:CreateBucket",
+                    "s3:DeleteBucket",
+                    "s3:DeleteBucketWebsite",
+                    "s3:PutAccelerateConfiguration",
+                    "s3:PutAnalyticsConfiguration",
+                    "s3:PutBucketAcl",
+                    "s3:PutBucketCORS",
+                    "s3:PutBucketLogging",
+                    "s3:PutBucketNotification",
+                    "s3:PutBucketPublicAccessBlock",
+                    "s3:PutBucketVersioning",
+                    "s3:PutBucketWebsite",
+                    "s3:PutEncryptionConfiguration",
+                    "s3:PutInventoryConfiguration",
+                    "s3:PutLifecycleConfiguration",
+                    "s3:PutMetricsConfiguration",
+                    "s3:PutReplicationConfiguration",
+					"s3:PutBucketTagging"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow"
+                },
+                {
+                  "Action": [
+                    "s3:PutBucketPolicy"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "arn:aws:s3:::bucket/${AppName}-*"
+                  },
+                  "Effect": "Allow"
+                },                
+                {
+                  "Action": [
+                    "kms:CreateKey",
+                    "kms:CreateAlias",
+                    "kms:DeleteAlias",
+                    "kms:DisableKey",
+                    "kms:EnableKey",
+                    "kms:UpdateAlias",
+                    "kms:TagResource",
+                    "kms:UntagResource"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow"
+                },
+				{
+                  "Action": [
+                    "ec2:DescribeAccountAttributes",
+                    "ec2:DescribeSecurityGroups",
+                    "ec2:DescribeSubnets",
+                    "ec2:DescribeVpcs",
+					"ec2:CreateNetworkInterface",
+					"ec2:DescribeNetworkInterfaces",
+					"ec2:CreateNetworkInterfacePermission"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow"
+                },
+                {
+                  "Action": [
+                    "iam:PassRole"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Sub": "arn:aws:iam::${AWS::AccountId}:role/${AppName}-*",
+					  "Fn::Sub": "arn:aws:iam::${AWS::AccountId}:role/orderserv-*",
+					  "Fn::Sub": "arn:aws:iam::${AWS::AccountId}:role/*"
+                    }
+                  ],
+                  "Effect": "Allow"
+                },
+                {
+                  "Action": [
+                    "cloudformation:CreateChangeSet"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Sub": "arn:aws:cloudformation:${AWS::Region}:aws:transform/Serverless-2016-10-31"
+                    }
+                  ],
+                  "Effect": "Allow"
+                },
+                {
+                  "Action": [
+                    "iam:CreateServiceLinkedRole",
+                    "iam:DeleteRole",
+                    "iam:GetRole",
+                    "iam:GetRolePolicy",
+                    "iam:PutRolePolicy",
+					"iam:TagRole"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow"
+                },
+                {
+                  "Action": [
+                    "iam:AttachRolePolicy",
+                    "iam:CreateRole",
+                    "iam:DeleteRolePolicy",
+                    "iam:DetachRolePolicy",
+                    "iam:PutRolePermissionsBoundary"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow",
+                  "Condition": {
+                    "StringEquals": {
+                      "iam:PermissionsBoundary": {
+                        "Fn::Sub": "arn:aws:iam::${AWS::AccountId}:policy/${AppName}-PermissionsBoundary"
+                      }
+                    }
+                  }
+                },
+                {
+                  "Action": [
+                    "cloudwatch:DeleteAlarms",
+                    "cloudwatch:DeleteDashboards",
+                    "cloudwatch:DisableAlarmActions",
+                    "cloudwatch:EnableAlarmActions",
+                    "cloudwatch:GetDashboard",
+                    "cloudwatch:ListTagsForResource",
+                    "cloudwatch:PutDashboard",
+                    "cloudwatch:PutMetricAlarm",
+                    "cloudwatch:PutMetricData",
+                    "cloudwatch:SetAlarmState",
+                    "cloudwatch:TagResource",
+                    "cloudwatch:UntagResource"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow"
+                },
+                {
+                  "Action": [
+                    "logs:*"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow"
+                },				
+                {
+                  "Action": [
+                    "codedeploy:CreateApplication",
+                    "codedeploy:CreateDeployment",
+                    "codedeploy:CreateDeploymentConfig",
+                    "codedeploy:CreateDeploymentGroup",
+                    "codedeploy:DeleteApplication",
+                    "codedeploy:DeleteDeployment",
+                    "codedeploy:DeleteDeploymentConfig",
+                    "codedeploy:DeleteDeploymentGroup",
+                    "codedeploy:GetDeployment",
+                    "codedeploy:GetDeploymentConfig",
+                    "codedeploy:GetDeploymentGroup",
+                    "codedeploy:PutLifecycleEventHookExecutionStatus",
+                    "codedeploy:RegisterApplicationRevision",
+                    "codedeploy:StopDeployment",
+                    "codedeploy:UpdateApplication",
+                    "codedeploy:UpdateDeploymentGroup"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow"
+                },
+                {
+                  "Action": [
+                    "secretsmanager:CreateSecret",
+                    "secretsmanager:GetRandomPassword",
+                    "secretsmanager:GetResourcePolicy",
+                    "secretsmanager:ListSecrets",
+                    "secretsmanager:CancelRotateSecret",
+                    "secretsmanager:DeleteSecret",
+                    "secretsmanager:DescribeSecret",
+                    "secretsmanager:GetSecretValue",
+                    "secretsmanager:ListSecretVersionIds",
+                    "secretsmanager:PutSecretValue",
+                    "secretsmanager:RestoreSecret",
+                    "secretsmanager:RotateSecret",
+                    "secretsmanager:TagResource",
+                    "secretsmanager:UntagResource",
+                    "secretsmanager:UpdateSecret",
+                    "secretsmanager:UpdateSecretVersionStage"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow"
+                },
+                {
+                  "Action": [
+                    "secretsmanager:DeleteResourcePolicy",
+                    "secretsmanager:PutResourcePolicy"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow",
+                  "Condition": {
+                    "StringEquals": {
+                      "aws:RequestTag/aws:cloudformation:stack-name": [
+                        {
+                          "Ref": "AppName"
+                        }
+                      ]
+                    },
+                    "ForAllValues:StringEquals": {
+                      "aws:TagKeys": "aws:cloudformation:stack-name"
+                    }
+                  }
+                },
+                {
+                  "Action": [
+                    "ssm:DescribeParameters",
+                    "ssm:AddTagsToResource",
+                    "ssm:DeleteParameter",
+                    "ssm:DeleteParameters",
+                    "ssm:DescribeDocumentParameters",
+                    "ssm:LabelParameterVersion",
+                    "ssm:GetParameter",
+                    "ssm:GetParameterHistory",
+                    "ssm:GetParameters",
+                    "ssm:GetParametersByPath",
+                    "ssm:PutParameter",
+                    "ssm:RemoveTagsFromResource"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow"
+                },                
+                {
+                  "Action": [
+                    "ec2:DescribeAccountAttributes",
+                    "ec2:DescribeSecurityGroups",
+                    "ec2:DescribeSubnets",
+                    "ec2:DescribeVpcs"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow"
+                }
+              ]
+            }
+          }
+        ],
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "cloudformation.amazonaws.com"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },	
+    "ProjectPipeline": {
+      "Description": "Creating a deployment pipeline for your project in AWS CodePipeline",
+      "Type": "AWS::CodePipeline::Pipeline",
+      "Properties": {
+        "RoleArn": {
+          "Fn::GetAtt": [
+            "CodePipelineRole",
+            "Arn"
+          ]
+        },
+        "Stages": [
+          {
+            "Name": "Source",
+            "Actions": [
+              {
+                "InputArtifacts": [],
+                "RunOrder": 1,
+                "ActionTypeId": {
+                  "Category": "Source",
+                  "Owner": "AWS",
+                  "Version": 1,
+                  "Provider": "CodeCommit"
+                },
+                "OutputArtifacts": [
+                  {
+                    "Name": {
+                      "Fn::Join": [
+                        "-",
+                        [
+                          {
+                            "Ref": "AppName"
+                          },
+                          "SourceArtifact"
+                        ]
+                      ]
+                    }
+                  }
+                ],
+                "Configuration": {
+                          "PollForSourceChanges": false,
+                          "BranchName": {
+                            "Ref": "Branch"
+                          },
+                          "RepositoryName": {
+                            "Ref": "RepositoryName"
+                          }
+				  },
+                "Name": "ApplicationSource"
+              }
+            ]
+          },
+          {
+            "Name": "Build",
+            "Actions": [
+              {
+                "InputArtifacts": [
+                  {
+                    "Name": {
+                      "Fn::Join": [
+                        "-",
+                        [
+                          {
+                            "Ref": "AppName"
+                          },
+                          "SourceArtifact"
+                        ]
+                      ]
+                    }
+                  }
+                ],
+                "RunOrder": 1,
+                "ActionTypeId": {
+                  "Category": "Build",
+                  "Owner": "AWS",
+                  "Version": 1,
+                  "Provider": "CodeBuild"
+                },
+                "OutputArtifacts": [
+                  {
+                    "Name": {
+                      "Fn::Join": [
+                        "-",
+                        [
+                          {
+                            "Ref": "AppName"
+                          },
+                          "BuildArtifact"
+                        ]
+                      ]
+                    }
+                  }
+                ],
+                "Configuration": {
+                  "ProjectName": {
+                    "Ref": "AppName"
+                  }
+                },
+                "Name": "PackageExport"
+              }
+            ]
+          },
+          {
+            "Name": "Deploy",
+            "Actions": [
+              {
+                "InputArtifacts": [
+                  {
+                    "Name": {
+                      "Fn::Join": [
+                        "-",
+                        [
+                          {
+                            "Ref": "AppName"
+                          },
+                          "BuildArtifact"
+                        ]
+                      ]
+                    }
+                  }
+                ],
+                "RunOrder": 1,
+                "ActionTypeId": {
+                  "Category": "Deploy",
+                  "Owner": "AWS",
+                  "Version": 1,
+                  "Provider": "CloudFormation"
+                },
+                "OutputArtifacts": [],
+                "Configuration": {
+                  "ActionMode": "CHANGE_SET_REPLACE",
+                  "ChangeSetName": "pipeline-changeset",
+                  "RoleArn": {
+                    "Fn::GetAtt": [
+                      "CloudFormationRole",
+                      "Arn"
+                    ]
+                  },
+                  "ParameterOverrides":{
+					"Fn::Sub": "{\"AppName\":\"${AppName}\",\"AuthLayerARN\":\"${AuthLayerARN}\",\"AdminJKSUri\":\"${AdminJKSUri}\",\"EnvironmentName\":\"${Environment}\",\"AdminJWTIssuer\":\"${AdminJWTIssuer}\",\"OLOJWTIssuer\":\"${OLOJWTIssuer}\",\"AUJWTISR\":\"${AUJWTISR}\"}"
+                  },
+                  "StackName": {
+                    "Ref": "AppName"
+                  },
+                  "Capabilities": "CAPABILITY_NAMED_IAM",
+                  "TemplatePath": {
+                    "Fn::Sub": "${AppName}-BuildArtifact::template-export.yml"
+                  }
+                },
+                "Name": "GenerateChangeSet"
+              },
+              {
+                "InputArtifacts": [],
+                "RunOrder": 2,
+                "ActionTypeId": {
+                  "Category": "Deploy",
+                  "Owner": "AWS",
+                  "Version": 1,
+                  "Provider": "CloudFormation"
+                },
+                "OutputArtifacts": [],
+                "Configuration": {
+                  "StackName": {
+                    "Ref": "AppName"
+                  },
+                  "ActionMode": "CHANGE_SET_EXECUTE",
+                  "ChangeSetName": "pipeline-changeset"
+                },
+                "Name": "ExecuteChangeSet"
+              }
+            ]
+          }
+        ],
+        "ArtifactStore": {
+          "Type": "S3",
+          "Location": {
+            "Ref": "S3Bucket"
+          }
+        },
+        "Name": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AppName"
+              },
+              "pipeline"
+            ]
+          ]
+        }
+      },
+      "DependsOn": [
+        "CodePipelineRole",
+        "S3Bucket",
+        "CodeBuildProject",
+        "CloudFormationRole"
+      ]
+    },
+    "CodeBuildProject": {
+      "Type": "AWS::CodeBuild::Project",
+      "Properties": {
+        "Description": {
+          "Fn::Join": [
+            "",
+            [
+              "AWS CloudFormation created CodeBuild App for ",
+              {
+                "Ref": "AppName"
+              }
+            ]
+          ]
+        },
+        "ServiceRole": {
+          "Ref": "CodePipelineRole"
+        },
+        "Artifacts": {
+          "Packaging": "zip",
+          "Type": "codepipeline"
+        },
+        "Environment": {
+          "ComputeType": "small",
+          "Image": "aws/codebuild/amazonlinux2-x86_64-standard:4.0",
+          "Type": "LINUX_CONTAINER",
+          "EnvironmentVariables": [
+            {
+              "Name": "S3_BUCKET",
+              "Value": {
+                "Ref": "S3Bucket"
+              }
+            },
+            {
+              "Name": "APP_ID",
+              "Value": {
+                "Ref": "AppName"
+              }
+            },
+            {
+              "Name": "ACCOUNT_ID",
+              "Value": {
+                "Ref": "AWS::AccountId"
+              }
+            },
+			{
+              "Name": "AWS_DEFAULT_REGION",
+              "Value": {
+                "Ref": "AWS::Region"
+              }
+			},
+			{
+              "Name": "BRANCH_NAME",
+              "Value": {
+                "Ref": "Branch"
+              }
+            },
+			{
+              "Name": "IMAGE_REPO_NAME",
+              "Value": {
+                "Ref": "RepositoryName"
+              }
+            },
+			{
+              "Name": "PARAM_STORE_IMG_VERSION_PREFIX",
+              "Value": {
+                "Ref": "Environment"
+              }
+            }			
+          ]
+        },
+        "Source": {
+          "Type": "codepipeline"
+        },
+        "Name": {
+          "Ref": "AppName"
+        }
+      },
+      "DependsOn": [
+        "CodePipelineRole"
+      ]
+    },
+    "SourceEvent": {
+      "Type": "AWS::Events::Rule",
+      "Properties": {
+        "Description": "Rule for Amazon CloudWatch Events to detect changes to the source repository and trigger pipeline execution",
+        "EventPattern": {
+          "source": [
+            "aws.codecommit"
+          ],
+          "detail": {
+            "referenceType": [
+              "branch"
+            ],
+            "event": [
+              "referenceCreated",
+              "referenceUpdated"
+            ],
+            "referenceName": [
+			 {
+              "Ref" : "Branch"
+			 }
+            ]
+          },
+          "resources": [
+            {
+              "Ref" : "CodeCommitRepoARN"
+            }
+          ],
+          "detail-type": [
+            "CodeCommit Repository State Change"
+          ]
+        },
+        "Name": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AppName"
+              },
+              "SourceEvent"
+            ]
+          ]
+        },
+        "State": "ENABLED",
+        "Targets": [
+          {
+            "RoleArn": {
+              "Fn::GetAtt": [
+                "CodePipelineRole",
+                "Arn"
+              ]
+            },
+            "Id": "ProjectPipelineTarget",
+            "Arn": {
+              "Fn::Join": [
+                ":",
+                [
+                  "arn",
+                  "aws",
+                  "codepipeline",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  {
+                    "Ref": "AWS::AccountId"
+                  },
+                  {
+                    "Fn::Join": [
+                      "-",
+                      [
+                        {
+                          "Ref": "AppName"
+                        },
+                        "pipeline"
+                      ]
+                    ]
+                  }
+                ]
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "S3ArtifactBucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Description": "Setting Amazon S3 bucket policy for AWS CodePipeline access",
+      "Properties": {
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Id": "SSEAndSSLPolicy",
+          "Statement": [
+            {
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:s3:::",
+                      {
+                        "Ref": "S3Bucket"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:s3:::",
+                      {
+                        "Ref": "S3Bucket"
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
+              ],
+              "Effect": "Allow",
+              "Sid": "WhitelistedGet",
+              "Action": [
+                "s3:GetObject",
+                "s3:GetObjectVersion",
+                "s3:GetBucketVersioning"
+              ],
+              "Principal": {
+                "AWS": [
+                  {
+                    "Fn::GetAtt": [
+                      "CodePipelineRole",
+                      "Arn"
+                    ]
+                  },
+                  {
+                    "Fn::GetAtt": [
+                      "CloudFormationRole",
+                      "Arn"
+                    ]
+                  }
+                ]
+              }
+            },
+		{
+			"Effect":"Deny",
+			"Principal": "*",
+			"Action": [
+				"s3:*"
+			],
+			"Resource" : [
+				{
+					"Fn::Join": [
+						"",
+						[
+							"arn:aws:s3:::",
+							{
+								"Ref": "S3Bucket"
+							}
+						]
+					]
+				},
+				{
+					"Fn::Join": [
+						"",
+						[
+							"arn:aws:s3:::",
+							{
+								"Ref": "S3Bucket"
+							},
+							"/*"
+						]
+					]
+				}
+			],
+			"Condition": {
+				"Bool": {
+				  "aws:SecureTransport": false
+				}
+			}
+		},
+            {
+              "Action": [
+                "s3:PutObject"
+              ],
+              "Sid": "WhitelistedPut",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:s3:::",
+                      {
+                        "Ref": "S3Bucket"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:s3:::",
+                      {
+                        "Ref": "S3Bucket"
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
+              ],
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": [
+                  {
+                    "Fn::GetAtt": [
+                      "CodePipelineRole",
+                      "Arn"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "Bucket": {
+          "Ref": "S3Bucket"
+        }
+      }
+    },
+    "CodePipelineRole": {
+      "Type": "AWS::IAM::Role",
+      "Description": "Creating toolchain role in IAM for CodePipeline",
+      "Properties": {
+        "RoleName": {
+          "Fn::Sub": "${AppName}-CodePipelineRole"
+        },
+        "Path": "/",
+        "Policies": [
+          {
+            "PolicyName": "CodePipelineRolePolicy",
+            "PolicyDocument": {
+              "Statement": [
+                {
+                  "Action": [
+                    "*"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Sub": "arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AppName}/*"
+                    },
+                    {
+                      "Fn::Sub": "arn:aws:codebuild:${AWS::Region}:${AWS::AccountId}:project/${AppName}"
+                    },
+                    {
+                      "Fn::Sub": "arn:aws:codecommit:${AWS::Region}:${AWS::AccountId}:${RepositoryName}"
+                    },
+                    {
+                      "Fn::Sub": "arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${AppName}-pipeline"
+                    },
+                    {
+                      "Fn::Sub": "arn:aws:s3:::${S3Bucket}"
+                    },
+                    {
+                      "Fn::Sub": "arn:aws:s3:::${S3Bucket}/*"
+                    }
+                  ],
+                  "Effect": "Allow"
+                },
+                {
+                  "Action": [
+                    "iam:PassRole"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::GetAtt": [
+                        "CloudFormationRole",
+                        "Arn"
+                      ]
+                    }
+                  ],
+                  "Effect": "Allow"
+                },
+                {
+                  "Action": [
+                    "cloudtrail:CreateTrail",
+                    "cloudtrail:StartLogging",
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:DescribeLogGroups",
+                    "logs:PutLogEvents"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow"
+                },
+				{
+                  "Action": [ "sts:AssumeRole" ],
+                  "Resource": [{"Fn::Sub": "arn:aws:iam::971757624067:role/orderserv-${Environment}-crossaccount-role"}],
+                  "Effect": "Allow"
+                },
+				
+				 {
+                  "Action": [
+                    "ssm:DescribeParameters",
+                    "ssm:AddTagsToResource",
+                    "ssm:DeleteParameter",
+                    "ssm:DeleteParameters",
+                    "ssm:DescribeDocumentParameters",
+                    "ssm:LabelParameterVersion",
+                    "ssm:GetParameter",
+                    "ssm:GetParameterHistory",
+                    "ssm:GetParameters",
+                    "ssm:GetParametersByPath",
+                    "ssm:PutParameter",
+                    "ssm:RemoveTagsFromResource"
+                  ],
+                  "Resource": "*",
+                  "Effect": "Allow"
+                }
+              ]
+            }
+          }
+        ],
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "codebuild.amazonaws.com",
+                  "codedeploy.amazonaws.com",
+                  "codepipeline.amazonaws.com",
+                  "elasticbeanstalk.amazonaws.com",
+                  "events.amazonaws.com",
+                  "lambda.amazonaws.com"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "Description": "A Node.js web service to verify JWT tokens",
+  "Parameters": {
+    "AppName": {
+      "Description": "Application Name.",
+      "MinLength": 2,
+      "MaxLength": 25,
+	  "Default": "dev-custom-authorizer",
+      "AllowedPattern": "^([a-zA-Z0-9-])+$",
+      "ConstraintDescription": "Application name must starts with <env>. Max 35 character allowed",
+      "Type": "String"
+    },
+    "RepositoryName": {
+      "MinLength": 1,
+      "Type": "String",
+      "Description": "Code repository name.",
+      "MaxLength": 100
+    },	
+	"Environment" :{
+	   "Type": "String",
+      "Description": "Environment Name",
+	  "Default" : "dev"
+	},
+	"AuthLayerARN": {
+		"Type": "String",
+		"Default": "arn:aws:lambda:ap-southeast-1:971757624067:layer:Auth-LayerLibs:1",
+		"Description": "Enter Auth Layer ARN"
+	},
+	"AdminJKSUri": {
+		"Type": "String",
+		"Default": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_9tV2czLsM/.well-known/jwks.json",
+		"Description": "Enter Admin JKS URI"
+	},
+	"AdminJWTIssuer" :{
+		"Type": "String",
+		"Default": "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_9tV2czLsM",
+		"Description": "Enter Admin JWT Issuer"
+	},
+	"AUJWTISR" :{
+		"Type": "String",
+		"Description": "Enter AU JKS URI",
+		"Default": "https://devcusp-au.npsso.yum-gtrm.com/auth/realms/kau"
+	},
+	"OLOJWTIssuer" :{
+		"Type": "String",
+		"Description": "Enter OLO JWT Issuer",
+		"Default": "https://ciamidp.npsso.yum-gtrm.com/auth/realms/yumoidc"
+	},	
+	"CodeCommitRepoARN" :{
+		"Type": "String",
+		"Description": "CodeCommitRepoARN if CodeCommit is created already"
+	},
+	"Branch" :{
+		"Type": "String",
+		"Description": "Enter the branch name from where the pipeline will be triggered"
+	}
+  }
+}

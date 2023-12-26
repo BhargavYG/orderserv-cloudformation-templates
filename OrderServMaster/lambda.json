@@ -1,0 +1,666 @@
+{ 
+    "AWSTemplateFormatVersion": "2010-09-09", 
+    "Description": "AWS CloudFormation Template Lambda", 
+	"Parameters": { 
+        "LAMBDAROLEARN": { 
+            "Type": "String", 
+            "Description": "ARN of the Lambda Role" 
+           },
+        "LAMBDABUCKET": { 
+            "Type": "String", 
+            "Description": "Name of the S3 bucket" 
+        }, 
+        "basketALBDNSNAME": { 
+            "Type": "String", 
+            "Description": "Enter the ALB DNS Name" 
+        }, 
+        "basketNLBTGARN": { 
+            "Type": "String", 
+            "Description": "Enter the ARN of NLB Target group" 
+        },
+		"orderALBDNSNAME": { 
+            "Type": "String", 
+            "Description": "Enter the ALB DNS Name" 
+        }, 
+        "orderNLBTGARN": { 
+            "Type": "String", 
+            "Description": "Enter the ARN of NLB Target group" 
+        },
+		"storeALBDNSNAME": { 
+            "Type": "String", 
+            "Description": "Enter the ALB DNS Name" 
+        }, 
+        "storeNLBTGARN": { 
+            "Type": "String", 
+            "Description": "Enter the ARN of NLB Target group" 
+        },
+		"customerALBDNSNAME": { 
+            "Type": "String", 
+            "Description": "Enter the ALB DNS Name" 
+        }, 
+        "customerNLBTGARN": { 
+            "Type": "String", 
+            "Description": "Enter the ARN of NLB Target group" 
+        },
+		"paymentALBDNSNAME": { 
+            "Type": "String", 
+            "Description": "Enter the ALB DNS Name" 
+        }, 
+        "paymentNLBTGARN": { 
+            "Type": "String", 
+            "Description": "Enter the ARN of NLB Target group" 
+        },
+		"menupromotionALBDNSNAME": { 
+            "Type": "String", 
+            "Description": "Enter the ALB DNS Name" 
+        }, 
+        "menupromotionNLBTGARN": { 
+            "Type": "String", 
+            "Description": "Enter the ARN of NLB Target group" 
+        },		
+        "S3BUCKET": { 
+            "Type": "String",
+            "Description": "Bucket to hold ALB IP Addresses" 
+        }, 
+        "Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"AppName": {
+			"Type": "String",
+			"Default": "order-serv",
+			"Description": "Application Name"
+		},
+		"NestStackBucketNameENVPrefix": {
+			"Type": "String",
+			"Default": "DEV",
+			"Description": "Enter the Name of ENV as PROD",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"SecurityGroup": {
+			"Type": "String",
+			"Description": "Security Group"
+		},
+		"SubnetId01": {
+			"Type": "String",
+			"Description": "SubnetId01"
+		},
+		"SubnetId02": {
+			"Type": "String",
+			"Description": "SubnetId02"
+		}		
+    },
+    "Resources": {
+		"basketnlbtgwithalb": { 
+            "Type": "AWS::Lambda::Function", 
+            "Properties": { 
+                "FunctionName": { "Fn::Sub": "orderserv-${Environment}-basket-nlb-tg-with-alb" }, 
+                "Handler": "lambda_function.lambda_handler", 
+                "Role": { 
+                    "Ref": "LAMBDAROLEARN" 
+                }, 
+                "Code": { 
+                    "S3Bucket": { 
+                        "Ref": "LAMBDABUCKET" 
+                    }, 
+                    "S3Key": { "Fn::Sub": "${NestStackBucketNameENVPrefix}/OrderServMaster/lambdacode/NLB_TG_With_ALB.zip" }  
+                }, 
+				"VpcConfig" :{
+					"SecurityGroupIds" : [{ 
+                        "Ref": "SecurityGroup" 
+                    }],
+					"SubnetIds" :[{ 
+                        "Ref": "SubnetId01" 
+                    },{ 
+                        "Ref": "SubnetId02" 
+                    }]
+				},
+                "Runtime": "python3.7", 
+                "Timeout": 10, 
+                "Environment": { 
+                    "Variables": { 
+                        "ALB_DNS_NAME": { "Ref": "basketALBDNSNAME" }, 
+                        "ALB_LISTENER": "80", 
+                        "CW_METRIC_FLAG_IP_COUNT": "true", 
+                        "INVOCATIONS_BEFORE_DEREGISTRATION": "3", 
+                        "MAX_LOOKUP_PER_INVOCATION": "50", 
+                        "NLB_TG_ARN": { "Ref": "basketNLBTGARN" }, 
+                        "S3_BUCKET": { "Ref": "S3BUCKET" } 
+                    } 
+                },
+				"Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-basket-nlb-tg-with-alb" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": "all"}
+                ]
+            }
+        },
+		"customernlbtgwithalb": { 
+            "Type": "AWS::Lambda::Function", 
+            "Properties": { 
+                "FunctionName": { "Fn::Sub": "orderserv-${Environment}-customer-nlb-tg-with-alb" }, 
+                "Handler": "lambda_function.lambda_handler", 
+                "Role": { 
+                    "Ref": "LAMBDAROLEARN" 
+                }, 
+                "Code": { 
+                    "S3Bucket": { 
+                        "Ref": "LAMBDABUCKET" 
+                    }, 
+                    "S3Key": { "Fn::Sub": "${NestStackBucketNameENVPrefix}/OrderServMaster/lambdacode/NLB_TG_With_ALB.zip" }  
+                }, 
+				"VpcConfig" :{
+					"SecurityGroupIds" : [{ 
+                        "Ref": "SecurityGroup" 
+                    }],
+					"SubnetIds" :[{ 
+                        "Ref": "SubnetId01" 
+                    },{ 
+                        "Ref": "SubnetId02" 
+                    }]
+				},
+                "Runtime": "python3.7", 
+                "Timeout": 10, 
+                "Environment": { 
+                    "Variables": { 
+                        "ALB_DNS_NAME": { "Ref": "customerALBDNSNAME" }, 
+                        "ALB_LISTENER": "80", 
+                        "CW_METRIC_FLAG_IP_COUNT": "true", 
+                        "INVOCATIONS_BEFORE_DEREGISTRATION": "3", 
+                        "MAX_LOOKUP_PER_INVOCATION": "50", 
+                        "NLB_TG_ARN": { "Ref": "customerNLBTGARN" }, 
+                        "S3_BUCKET": { "Ref": "S3BUCKET" } 
+                    } 
+                },
+				"Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-customer-nlb-tg-with-alb" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": "all"}
+                ]
+            }
+        },
+		"ordernlbtgwithalb": { 
+            "Type": "AWS::Lambda::Function", 
+            "Properties": { 
+                "FunctionName": { "Fn::Sub": "orderserv-${Environment}-order-nlb-tg-with-alb" }, 
+                "Handler": "lambda_function.lambda_handler", 
+                "Role": { 
+                    "Ref": "LAMBDAROLEARN" 
+                }, 
+                "Code": { 
+                    "S3Bucket": { 
+                        "Ref": "LAMBDABUCKET" 
+                    }, 
+                    "S3Key": { "Fn::Sub": "${NestStackBucketNameENVPrefix}/OrderServMaster/lambdacode/NLB_TG_With_ALB.zip" }  
+                }, 
+				"VpcConfig" :{
+					"SecurityGroupIds" : [{ 
+                        "Ref": "SecurityGroup" 
+                    }],
+					"SubnetIds" :[{ 
+                        "Ref": "SubnetId01" 
+                    },{ 
+                        "Ref": "SubnetId02" 
+                    }]
+				},
+                "Runtime": "python3.7", 
+                "Timeout": 10, 
+                "Environment": { 
+                    "Variables": { 
+                        "ALB_DNS_NAME": { "Ref": "orderALBDNSNAME" }, 
+                        "ALB_LISTENER": "80", 
+                        "CW_METRIC_FLAG_IP_COUNT": "true", 
+                        "INVOCATIONS_BEFORE_DEREGISTRATION": "3", 
+                        "MAX_LOOKUP_PER_INVOCATION": "50", 
+                        "NLB_TG_ARN": { "Ref": "orderNLBTGARN" }, 
+                        "S3_BUCKET": { "Ref": "S3BUCKET" } 
+                    } 
+                },
+				"Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-order-nlb-tg-with-alb" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": "all"}
+                ]
+            }
+        },
+		"storenlbtgwithalb": { 
+            "Type": "AWS::Lambda::Function", 
+            "Properties": { 
+                "FunctionName": { "Fn::Sub": "orderserv-${Environment}-store-nlb-tg-with-alb" }, 
+                "Handler": "lambda_function.lambda_handler", 
+                "Role": { 
+                    "Ref": "LAMBDAROLEARN" 
+                }, 
+                "Code": { 
+                    "S3Bucket": { 
+                        "Ref": "LAMBDABUCKET" 
+                    }, 
+                    "S3Key": { "Fn::Sub": "${NestStackBucketNameENVPrefix}/OrderServMaster/lambdacode/NLB_TG_With_ALB.zip" }  
+                }, 
+				"VpcConfig" :{
+					"SecurityGroupIds" : [{ 
+                        "Ref": "SecurityGroup" 
+                    }],
+					"SubnetIds" :[{ 
+                        "Ref": "SubnetId01" 
+                    },{ 
+                        "Ref": "SubnetId02" 
+                    }]
+				},
+                "Runtime": "python3.7", 
+                "Timeout": 10, 
+                "Environment": { 
+                    "Variables": { 
+                        "ALB_DNS_NAME": { "Ref": "storeALBDNSNAME" }, 
+                        "ALB_LISTENER": "80", 
+                        "CW_METRIC_FLAG_IP_COUNT": "true", 
+                        "INVOCATIONS_BEFORE_DEREGISTRATION": "3", 
+                        "MAX_LOOKUP_PER_INVOCATION": "50", 
+                        "NLB_TG_ARN": { "Ref": "storeNLBTGARN" }, 
+                        "S3_BUCKET": { "Ref": "S3BUCKET" } 
+                    } 
+                },
+				"Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-store-nlb-tg-with-alb" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": "all"}
+                ]
+            }
+        },        "customernlbtgwithalb": { 
+            "Type": "AWS::Lambda::Function", 
+            "Properties": { 
+                "FunctionName": { "Fn::Sub": "orderserv-${Environment}-customer-nlb-tg-with-alb" }, 
+                "Handler": "lambda_function.lambda_handler", 
+                "Role": { 
+                    "Ref": "LAMBDAROLEARN" 
+                }, 
+                "Code": { 
+                    "S3Bucket": { 
+                        "Ref": "LAMBDABUCKET" 
+                    }, 
+                    "S3Key": { "Fn::Sub": "${NestStackBucketNameENVPrefix}/OrderServMaster/lambdacode/NLB_TG_With_ALB.zip" }  
+                }, 
+				"VpcConfig" :{
+					"SecurityGroupIds" : [{ 
+                        "Ref": "SecurityGroup" 
+                    }],
+					"SubnetIds" :[{ 
+                        "Ref": "SubnetId01" 
+                    },{ 
+                        "Ref": "SubnetId02" 
+                    }]
+				},
+                "Runtime": "python3.7", 
+                "Timeout": 10, 
+                "Environment": { 
+                    "Variables": { 
+                        "ALB_DNS_NAME": { "Ref": "customerALBDNSNAME" }, 
+                        "ALB_LISTENER": "80", 
+                        "CW_METRIC_FLAG_IP_COUNT": "true", 
+                        "INVOCATIONS_BEFORE_DEREGISTRATION": "3", 
+                        "MAX_LOOKUP_PER_INVOCATION": "50", 
+                        "NLB_TG_ARN": { "Ref": "customerNLBTGARN" }, 
+                        "S3_BUCKET": { "Ref": "S3BUCKET" } 
+                    } 
+                },
+				"Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-customer-nlb-tg-with-alb" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": "all"}
+                ]
+            }
+        },
+		"paymentnlbtgwithalb": { 
+            "Type": "AWS::Lambda::Function", 
+            "Properties": { 
+                "FunctionName": { "Fn::Sub": "orderserv-${Environment}-payment-nlb-tg-with-alb" }, 
+                "Handler": "lambda_function.lambda_handler", 
+                "Role": { 
+                    "Ref": "LAMBDAROLEARN" 
+                }, 
+                "Code": { 
+                    "S3Bucket": { 
+                        "Ref": "LAMBDABUCKET" 
+                    }, 
+                    "S3Key": { "Fn::Sub": "${NestStackBucketNameENVPrefix}/OrderServMaster/lambdacode/NLB_TG_With_ALB.zip" }  
+                }, 
+				"VpcConfig" :{
+					"SecurityGroupIds" : [{ 
+                        "Ref": "SecurityGroup" 
+                    }],
+					"SubnetIds" :[{ 
+                        "Ref": "SubnetId01" 
+                    },{ 
+                        "Ref": "SubnetId02" 
+                    }]
+				},
+                "Runtime": "python3.7", 
+                "Timeout": 10, 
+                "Environment": { 
+                    "Variables": { 
+                        "ALB_DNS_NAME": { "Ref": "paymentALBDNSNAME" }, 
+                        "ALB_LISTENER": "80", 
+                        "CW_METRIC_FLAG_IP_COUNT": "true", 
+                        "INVOCATIONS_BEFORE_DEREGISTRATION": "3", 
+                        "MAX_LOOKUP_PER_INVOCATION": "50", 
+                        "NLB_TG_ARN": { "Ref": "paymentNLBTGARN" }, 
+                        "S3_BUCKET": { "Ref": "S3BUCKET" } 
+                    } 
+                },
+				"Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-payment-nlb-tg-with-alb" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": "all"}
+                ]
+            }
+        },
+		"menupromotionnlbtgwithalb": { 
+            "Type": "AWS::Lambda::Function", 
+            "Properties": { 
+                "FunctionName": { "Fn::Sub": "orderserv-${Environment}-menupromotion-nlb-tg-with-alb" }, 
+                "Handler": "lambda_function.lambda_handler", 
+                "Role": { 
+                    "Ref": "LAMBDAROLEARN" 
+                }, 
+                "Code": { 
+                    "S3Bucket": { 
+                        "Ref": "LAMBDABUCKET" 
+                    }, 
+                    "S3Key": { "Fn::Sub": "${NestStackBucketNameENVPrefix}/OrderServMaster/lambdacode/NLB_TG_With_ALB.zip" }  
+                }, 
+				"VpcConfig" :{
+					"SecurityGroupIds" : [{ 
+                        "Ref": "SecurityGroup" 
+                    }],
+					"SubnetIds" :[{ 
+                        "Ref": "SubnetId01" 
+                    },{ 
+                        "Ref": "SubnetId02" 
+                    }]
+				},
+                "Runtime": "python3.7", 
+                "Timeout": 10, 
+                "Environment": { 
+                    "Variables": { 
+                        "ALB_DNS_NAME": { "Ref": "menupromotionALBDNSNAME" }, 
+                        "ALB_LISTENER": "80", 
+                        "CW_METRIC_FLAG_IP_COUNT": "true", 
+                        "INVOCATIONS_BEFORE_DEREGISTRATION": "3", 
+                        "MAX_LOOKUP_PER_INVOCATION": "50", 
+                        "NLB_TG_ARN": { "Ref": "menupromotionNLBTGARN" }, 
+                        "S3_BUCKET": { "Ref": "S3BUCKET" } 
+                    } 
+                },
+				"Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-menupromotion-nlb-tg-with-alb" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": "all"}
+                ]
+            }
+        },
+		"BasketNLBALBScheduledRule": {
+            "Type": "AWS::Events::Rule",
+            "Properties": {
+                "Description": "ScheduledRule from Basket NLB Target update",
+                "ScheduleExpression": "rate(5 minutes)",
+                "State": "ENABLED",
+                "Targets": [
+                    {
+                        "Arn": {
+                            "Fn::GetAtt": [
+                                "basketnlbtgwithalb",
+                                "Arn"
+                            ]
+                        },
+                        "Id": {"Fn::Sub": "orderserv-${Environment}-basket-nlbalblambda-schedule-rule"}
+                    }
+                ]
+            },
+            "DependsOn": [
+                "basketnlbtgwithalb"
+            ]
+        },
+        "OrderNLBALBScheduledRule": {
+            "Type": "AWS::Events::Rule",
+            "Properties": {
+                "Description": "ScheduledRule from Order NLB Target update",
+                "ScheduleExpression": "rate(5 minutes)",
+                "State": "ENABLED",
+                "Targets": [
+                    {
+                        "Arn": {
+                            "Fn::GetAtt": [
+                                "ordernlbtgwithalb",
+                                "Arn"
+                            ]
+                        },
+                        "Id": {"Fn::Sub": "orderserv-${Environment}-order-nlbalblambda-schedule-rule"}
+                    }
+                ]
+            },
+            "DependsOn": [
+                "ordernlbtgwithalb"
+            ]
+        },
+		"CustomerNLBALBScheduledRule": {
+            "Type": "AWS::Events::Rule",
+            "Properties": {
+                "Description": "ScheduledRule from Customer NLB Target update",
+                "ScheduleExpression": "rate(5 minutes)",
+                "State": "ENABLED",
+                "Targets": [
+                    {
+                        "Arn": {
+                            "Fn::GetAtt": [
+                                "customernlbtgwithalb",
+                                "Arn"
+                            ]
+                        },
+                        "Id": {"Fn::Sub": "orderserv-${Environment}-customer-nlbalblambda-schedule-rule"}
+                    }
+                ]
+            },
+            "DependsOn": [
+                "customernlbtgwithalb"
+            ]
+        },
+		"StoreNLBALBScheduledRule": {
+            "Type": "AWS::Events::Rule",
+            "Properties": {
+                "Description": "ScheduledRule from Store NLB Target update",
+                "ScheduleExpression": "rate(5 minutes)",
+                "State": "ENABLED",
+                "Targets": [
+                    {
+                        "Arn": {
+                            "Fn::GetAtt": [
+                                "storenlbtgwithalb",
+                                "Arn"
+                            ]
+                        },
+                        "Id": {"Fn::Sub": "orderserv-${Environment}-store-nlbalblambda-schedule-rule"}
+                    }
+                ]
+            },
+            "DependsOn": [
+                "storenlbtgwithalb"
+            ]
+        },
+		"PaymentNLBALBScheduledRule": {
+            "Type": "AWS::Events::Rule",
+            "Properties": {
+                "Description": "ScheduledRule from Payment NLB Target update",
+                "ScheduleExpression": "rate(5 minutes)",
+                "State": "ENABLED",
+                "Targets": [
+                    {
+                        "Arn": {
+                            "Fn::GetAtt": [
+                                "paymentnlbtgwithalb",
+                                "Arn"
+                            ]
+                        },
+                        "Id": {"Fn::Sub": "orderserv-${Environment}-payment-nlbalblambda-schedule-rule"}
+                    }
+                ]
+            },
+            "DependsOn": [
+                "paymentnlbtgwithalb"
+            ]
+        },
+		"MenuPromotionNLBALBScheduledRule": {
+            "Type": "AWS::Events::Rule",
+            "Properties": {
+                "Description": "ScheduledRule from menupromtn NLB Target update",
+                "ScheduleExpression": "rate(5 minutes)",
+                "State": "ENABLED",
+                "Targets": [
+                    {
+                        "Arn": {
+                            "Fn::GetAtt": [
+                                "menupromotionnlbtgwithalb",
+                                "Arn"
+                            ]
+                        },
+                        "Id": {"Fn::Sub": "orderserv-${Environment}-menupromtn-nlbalblambda-schedule-rule"}
+                    }
+                ]
+            },
+            "DependsOn": [
+                "menupromotionnlbtgwithalb"
+			]
+		},
+		"BasketLambdaInvokePermission": {
+            "Type": "AWS::Lambda::Permission",
+			"DependsOn" : ["basketnlbtgwithalb","BasketNLBALBScheduledRule"],
+            "Properties": {
+                "FunctionName": {
+                    "Fn::GetAtt": [
+                        "basketnlbtgwithalb",
+                        "Arn"
+                    ]
+                },
+                "Principal": "events.amazonaws.com",
+                "Action": "lambda:InvokeFunction",
+                "SourceArn": {
+                    "Fn::GetAtt": [
+                        "BasketNLBALBScheduledRule",
+                        "Arn"
+                    ]
+                }
+            }
+        },
+		"OrderLambdaInvokePermission": {
+            "Type": "AWS::Lambda::Permission",
+			"DependsOn" : ["ordernlbtgwithalb","OrderNLBALBScheduledRule"],
+            "Properties": {
+                "FunctionName": {
+                    "Fn::GetAtt": [
+                        "ordernlbtgwithalb",
+                        "Arn"
+                    ]
+                },
+                "Principal": "events.amazonaws.com",
+                "Action": "lambda:InvokeFunction",
+                "SourceArn": {
+                    "Fn::GetAtt": [
+                        "OrderNLBALBScheduledRule",
+                        "Arn"
+                    ]
+                }
+            }
+        },
+		"CustomerLambdaInvokePermission": {
+            "Type": "AWS::Lambda::Permission",
+			"DependsOn" : ["customernlbtgwithalb","CustomerNLBALBScheduledRule"],
+            "Properties": {
+                "FunctionName": {
+                    "Fn::GetAtt": [
+                        "customernlbtgwithalb",
+                        "Arn"
+                    ]
+                },
+                "Principal": "events.amazonaws.com",
+                "Action": "lambda:InvokeFunction",
+                "SourceArn": {
+                    "Fn::GetAtt": [
+                        "CustomerNLBALBScheduledRule",
+                        "Arn"
+                    ]
+                }
+            }
+        },
+		"StoreInvokePermission": {
+            "Type": "AWS::Lambda::Permission",
+			"DependsOn" : ["storenlbtgwithalb","StoreNLBALBScheduledRule"],
+            "Properties": {
+                "FunctionName": {
+                    "Fn::GetAtt": [
+                        "storenlbtgwithalb",
+                        "Arn"
+                    ]
+                },
+                "Principal": "events.amazonaws.com",
+                "Action": "lambda:InvokeFunction",
+                "SourceArn": {
+                    "Fn::GetAtt": [
+                        "StoreNLBALBScheduledRule",
+                        "Arn"
+                    ]
+                }
+            }
+        },
+		"PaymentLambdaInvokePermission": {
+            "Type": "AWS::Lambda::Permission",
+			"DependsOn" : ["paymentnlbtgwithalb","PaymentNLBALBScheduledRule"],
+            "Properties": {
+                "FunctionName": {
+                    "Fn::GetAtt": [
+                        "paymentnlbtgwithalb",
+                        "Arn"
+                    ]
+                },
+                "Principal": "events.amazonaws.com",
+                "Action": "lambda:InvokeFunction",
+                "SourceArn": {
+                    "Fn::GetAtt": [
+                        "PaymentNLBALBScheduledRule",
+                        "Arn"
+                    ]
+                }
+            }
+        },
+		"MenuPromotionLambdaInvokePermission": {
+            "Type": "AWS::Lambda::Permission",
+			"DependsOn" : ["menupromotionnlbtgwithalb","MenuPromotionNLBALBScheduledRule"],
+            "Properties": {
+                "FunctionName": {
+                    "Fn::GetAtt": [
+                        "menupromotionnlbtgwithalb",
+                        "Arn"
+                    ]
+                },
+                "Principal": "events.amazonaws.com",
+                "Action": "lambda:InvokeFunction",
+                "SourceArn": {
+                    "Fn::GetAtt": [
+                        "MenuPromotionNLBALBScheduledRule",
+                        "Arn"
+                    ]
+                }
+            }
+        }
+    }
+} 

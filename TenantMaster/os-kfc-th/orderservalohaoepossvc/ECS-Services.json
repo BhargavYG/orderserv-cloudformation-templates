@@ -1,0 +1,159 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "AWS CloudFormation Template for ECS Services",
+    "Parameters": {
+        "TGStackName": {
+            "Type": "String",
+            "Description": "Enter the Stack Name of Service-TargetGroups"
+        },
+        "TDStackname":{
+            "Type": "String",
+			"Description": "Enter the Stack Name of Task Definitions"
+        },
+		"PrivateSubnet01": {
+            "Type": "String",
+            "Description": "Enter the Private Subnet 01 ID"
+        },
+		"PrivateSubnet02": {
+            "Type": "String",
+            "Description": "Enter the Private Subnet 02 ID"
+        },
+		"ECSSecurityGroup": {
+            "Type": "String",
+            "Description": "Enter the ECS Security Group"
+        },
+		"Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/perf/qa/uat/prod/pen",
+			"AllowedValues" : ["dev","perf","qa","uat","prod","pen"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"Tenant": {
+			"Type": "String",
+			"Description": "Enter the tenant/country key",
+			"Default": "os-kfc-th",
+			"MaxLength": 9,
+			"MinLength": 9
+		},
+		"AppName": {
+			"Type": "String",
+			"Default": "orderserv",
+			"Description": "Application Name"
+		},
+		"ECSClusterName": {
+            "Type": "String",
+            "Description": "Enter the Name of ECS Cluster"
+        },
+		"TenantRolePolicyStackName" :{
+			"Type": "String",
+            "Description": "Enter the TenantRolePolicyStackName"		
+		},
+		"NamespaceId" :{
+			"Type": "String",
+            "Description": "Enter the rpivate DNS Namespace Id"		
+		}
+    },
+    "Resources": {
+        "orderservthalohaoepossvcECSService": {
+            "Type": "AWS::ECS::Service",
+			"DependsOn": ["orderservthalohaoepossvcServiceDiscovery"],
+            "Properties": {
+                "Cluster": {
+                    "Fn::Sub": "arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:cluster/${ECSClusterName}"
+                },
+				"NetworkConfiguration" : {
+					"AwsvpcConfiguration" : {
+						"AssignPublicIp" : "DISABLED",
+						"Subnets":[{"Ref" : "PrivateSubnet01"},{"Ref" : "PrivateSubnet02"}],
+						"SecurityGroups":[{"Ref" : "ECSSecurityGroup"}]
+					}
+				},
+                "LaunchType": "FARGATE",
+                "DeploymentConfiguration": {
+                    "MaximumPercent": 200,
+                    "MinimumHealthyPercent": 100
+                },
+                "DesiredCount": 1,
+                "SchedulingStrategy": "REPLICA",
+                "ServiceName": "orderserv-alohaaoe-pos-service-service",
+                "TaskDefinition": {
+                    "Fn::ImportValue" : {"Fn::Sub" : "${TDStackname}-orderservthalohaoepossvctaskdef"}
+                },
+				"ServiceRegistries": [{
+                    "ContainerName": "orderserv-alohaaoe-pos-service",
+                    "ContainerPort": 9012,
+                    "RegistryArn": {
+                        "Fn::GetAtt": ["orderservthalohaoepossvcServiceDiscovery", "Arn"]
+                    }
+                }],
+				"PropagateTags" : "SERVICE",
+				"Tags" : [
+					{"Key": "Name", "Value": "orderserv-alohaaoe-pos-service-service" }, 
+					{"Key": "AppName", "Value":{ "Ref": "AppName" }},
+					{"Key": "Environment", "Value": { "Ref": "Environment" }},
+					{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+						]
+            }
+        },
+		"orderservthalohaoepossvcECSServiceScalingTarget":{
+            "Type":"AWS::ApplicationAutoScaling::ScalableTarget",
+            "DependsOn":"orderservthalohaoepossvcECSService",
+            "Properties":{
+                "MaxCapacity":1,
+                "MinCapacity":1,
+                "ResourceId":{ "Fn::Join":[ "", [ "service/", { "Ref":"ECSClusterName" } , "/", { "Fn::GetAtt":[ "orderservthalohaoepossvcECSService", "Name" ] } ] ] },
+                "RoleARN": {
+					"Fn::ImportValue" : {"Fn::Sub" : "${TenantRolePolicyStackName}-ECSAutoScalingRoleARN"}
+					},
+                "ScalableDimension":"ecs:service:DesiredCount",
+                "ServiceNamespace":"ecs"
+            }
+        },
+        "orderservthalohaoepossvcECSServiceScalingPolicy":{
+            "Type":"AWS::ApplicationAutoScaling::ScalingPolicy",
+            "DependsOn":"orderservthalohaoepossvcECSServiceScalingTarget",
+            "Properties":{
+                "PolicyName": { 
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-orderservthalohaoepossvc-cpu-asp"
+                }, 
+                "PolicyType":"TargetTrackingScaling",
+                "ScalingTargetId":{
+                    "Ref": "orderservthalohaoepossvcECSServiceScalingTarget"
+                },
+                "TargetTrackingScalingPolicyConfiguration":{
+                    "PredefinedMetricSpecification" : {
+                        "PredefinedMetricType" : "ECSServiceAverageCPUUtilization"
+                    },
+                    "ScaleInCooldown" : 300,
+                    "ScaleOutCooldown" : 300,
+                    "TargetValue" : 300
+                }
+            }
+        },
+		"orderservthalohaoepossvcServiceDiscovery": {
+            "Type": "AWS::ServiceDiscovery::Service",
+            "Properties": {
+                "Name": {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-alohaoepossvc"
+                },
+                "Description": "Aloha Pos Service GRPC Service Discovery",
+                "DnsConfig": {
+                    "DnsRecords": [{
+                        "Type": "SRV",
+                        "TTL": 60
+                    }],
+                    "NamespaceId": {"Ref" : "NamespaceId"}
+                },
+                "HealthCheckCustomConfig" : {"FailureThreshold" : 1},
+				"Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-alohaoepossvc" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+                ]
+            }
+        }
+	}
+}

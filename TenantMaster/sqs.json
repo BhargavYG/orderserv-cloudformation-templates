@@ -1,0 +1,64 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "OrderServ SQS Cloudformation Template", 
+	"Parameters" : {
+		"Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"Tenant": {
+			"Type": "String",
+			"Description": "Enter the tenant/country key",
+			"Default": "os-kfc-in",
+			"MaxLength": 9,
+			"MinLength": 9
+		},
+		"AppName": {
+            "Type": "String",
+            "Default": "order-serv",
+            "Description": "Application Name"
+        }
+	},	
+	"Resources": {
+		"testSqsDev" :
+		{
+		  "Type" : "AWS::SQS::Queue",
+		  "Properties" : {
+			  "DelaySeconds" : 0,
+			  "MaximumMessageSize" : 262144,
+			  "MessageRetentionPeriod" : 345600,
+			  "QueueName" : { "Fn::Sub": "orderserv-${Environment}-${Tenant}-test-queue" },
+			  "ReceiveMessageWaitTimeSeconds" : 0,
+			  "RedrivePolicy" : {
+                    "deadLetterTargetArn": { 
+                        "Fn::GetAtt": ["testSqsDevDLQ", "Arn"] 
+                    }, 
+                    "maxReceiveCount": 3 
+					},
+			  "VisibilityTimeout" : 30,
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-test-queue" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }}
+					] 
+			}
+		},
+		"testSqsDevDLQ" :
+		{
+		  "Type" : "AWS::SQS::Queue",
+		  "Properties" : {
+			  "MessageRetentionPeriod" : 1209600,
+			  "QueueName" : { "Fn::Sub": "orderserv-${Environment}-${Tenant}-test-queue-DLQ" },
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-test-queue-DLQ" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }}
+					] 
+			}
+		}
+	}
+}

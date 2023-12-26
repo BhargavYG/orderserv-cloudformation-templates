@@ -1,0 +1,241 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "AWS CloudFormation Template for ECS Services",
+    "Parameters": {
+        "TGStackName": {
+            "Type": "String",
+            "Description": "Enter the Stack Name of Service-TargetGroups"
+        },
+        "TDStackname":{
+            "Type": "String",
+			"Description": "Enter the Stack Name of Task Definitions"
+        },
+		"PrivateSubnet01": {
+            "Type": "String",
+            "Description": "Enter the Private Subnet 01 ID"
+        },
+		"PrivateSubnet02": {
+            "Type": "String",
+            "Description": "Enter the Private Subnet 02 ID"
+        },
+		"ECSSecurityGroup": {
+            "Type": "String",
+            "Description": "Enter the ECS Security Group"
+        },
+		"Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"Tenant": {
+			"Type": "String",
+			"Description": "Enter the tenant/country key",
+			"Default": "os-kfc-in",
+			"MaxLength": 9,
+			"MinLength": 9
+		},
+		"AppName": {
+			"Type": "String",
+			"Default": "orderserv",
+			"Description": "Application Name"
+		},
+		"ECSClusterName": {
+            "Type": "String",
+            "Description": "Enter the Name of ECS Cluster"
+        },
+		"TenantRolePolicyStackName" :{
+			"Type": "String",
+            "Description": "Enter the TenantRolePolicyStackName"		
+		},
+		"NamespaceId" :{
+			"Type": "String",
+            "Description": "Enter the private DNS Namespace Id"		
+		},
+		"AppMeshName" :{
+			"Type": "String",
+            "Description": "Enter the name of App Mesh"		
+		}
+    },
+    "Resources": {
+        "orderservcustorchestrtnECSService": {
+            "Type": "AWS::ECS::Service",
+			"DependsOn": ["orderservcustorchestrtnServiceDiscovery"],
+            "Properties": {
+                "Cluster": {
+                    "Fn::Sub": "arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:cluster/${ECSClusterName}"
+                },
+				"NetworkConfiguration" : {
+					"AwsvpcConfiguration" : {
+						"AssignPublicIp" : "DISABLED",
+						"Subnets":[{"Ref" : "PrivateSubnet01"},{"Ref" : "PrivateSubnet02"}],
+						"SecurityGroups":[{"Ref" : "ECSSecurityGroup"}]
+					}
+				},
+                "LaunchType": "FARGATE",
+                "DeploymentConfiguration": {
+                    "MaximumPercent": 200,
+                    "MinimumHealthyPercent": 100
+                },
+                "DesiredCount": 1,
+                "LoadBalancers": [{
+                    "ContainerName": "orderserv-customer-orchestration",
+                    "ContainerPort": 9009,
+                    "TargetGroupArn": {
+                        "Fn::ImportValue": {
+                            "Fn::Sub": "${TGStackName}-orderservcustorchestrtnTargetGroup"
+                        }
+                    }
+                }],
+                "SchedulingStrategy": "REPLICA",
+                "ServiceName": "orderserv-customer-orchestration-service",
+                "TaskDefinition": {
+                    "Fn::ImportValue" : {"Fn::Sub" : "${TDStackname}-orderservcustorchestrtntaskdef"}
+                },
+				"ServiceRegistries": [{
+                    "ContainerName": "orderserv-customer-orchestration",
+                    "ContainerPort": 9009,
+                    "RegistryArn": {
+                        "Fn::GetAtt": ["orderservcustorchestrtnServiceDiscovery", "Arn"]
+                    }
+                }],
+				"PropagateTags" : "SERVICE",
+				"Tags" : [
+					{"Key": "Name", "Value": "orderserv-customer-orchestration-service" }, 
+					{"Key": "AppName", "Value":{ "Ref": "AppName" }},
+					{"Key": "Environment", "Value": { "Ref": "Environment" }},
+					{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+						]
+					
+            }
+        },
+		"orderservcustorchestrtnECSServiceScalingTarget":{
+            "Type":"AWS::ApplicationAutoScaling::ScalableTarget",
+            "DependsOn":"orderservcustorchestrtnECSService",
+            "Properties":{
+                "MaxCapacity":1,
+                "MinCapacity":1,
+                "ResourceId":{ "Fn::Join":[ "", [ "service/", { "Ref":"ECSClusterName" } , "/", { "Fn::GetAtt":[ "orderservcustorchestrtnECSService", "Name" ] } ] ] },
+                "RoleARN": {
+					"Fn::ImportValue" : {"Fn::Sub" : "${TenantRolePolicyStackName}-ECSAutoScalingRoleARN"}
+					},
+                "ScalableDimension":"ecs:service:DesiredCount",
+                "ServiceNamespace":"ecs"
+            }
+        },
+        "orderservcustorchestrtnECSSServiceScalingPolicy":{
+            "Type":"AWS::ApplicationAutoScaling::ScalingPolicy",
+            "DependsOn":"orderservcustorchestrtnECSServiceScalingTarget",
+            "Properties":{
+                "PolicyName": { 
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-orderservcustorchestrtn-cpu-asp"
+                }, 
+                "PolicyType":"TargetTrackingScaling",
+                "ScalingTargetId":{
+                    "Ref": "orderservcustorchestrtnECSServiceScalingTarget"
+                },
+                "TargetTrackingScalingPolicyConfiguration":{
+                    "PredefinedMetricSpecification" : {
+                        "PredefinedMetricType" : "ECSServiceAverageCPUUtilization"
+                    },
+                    "ScaleInCooldown" : 300,
+                    "ScaleOutCooldown" : 300,
+                    "TargetValue" : 70
+                }
+            }
+        },
+		"orderservcustorchestrtnServiceDiscovery": {
+            "Type": "AWS::ServiceDiscovery::Service",
+            "Properties": {
+                "Name": {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-custorchestrtn"
+                },
+                "Description": "Promotion Web API Service Discovery",
+                "DnsConfig": {
+                    "DnsRecords": [{
+                        "Type": "SRV",
+                        "TTL": 60
+                    }],
+                    "NamespaceId": {"Ref" : "NamespaceId"}
+                },
+                "HealthCheckCustomConfig" : {"FailureThreshold" : 1},
+				"Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-custorchestrtn" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }}
+                ]
+            }
+        },
+		"orderservcustorchestrtnAppMeshNode":{
+			"Type": "AWS::AppMesh::VirtualNode",
+			"DependsOn" : "orderservcustorchestrtnServiceDiscovery",
+			"Properties": {
+				"MeshName": {"Ref" : "AppMeshName"},
+				"VirtualNodeName": {"Fn::Sub" : "orderserv-${Environment}-${Tenant}-custorchestrtn-node"},
+				"Spec": {
+				  "BackendDefaults": {
+					"ClientPolicy": {}
+				  },
+				  "Backends": [],
+				  "Listeners": [
+					{
+					  "PortMapping": {
+						"Port": 9009,
+						"Protocol": "http"
+					  }
+					}
+				  ],
+				  "Logging": {},
+				  "ServiceDiscovery": {
+					"DNS": {
+					  "Hostname": {
+					   "Fn::Join": [
+							".",
+							[{"Fn::GetAtt": ["orderservcustorchestrtnServiceDiscovery", "Name"]},{"Fn::Sub" : "orderserv-${Environment}-${Tenant}-pvt-dns-ns"}]
+						]
+					  }
+					}
+				  }
+				},
+				"Tags": [
+						{"Key": "Name", "Value": {"Fn::Sub" : "orderserv-${Environment}-${Tenant}-custorchestrtn-node"} }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }}
+                ]
+			  }
+		},
+		"orderservcustorchestrtnAppMeshService":{
+			"DependsOn" : "orderservcustorchestrtnAppMeshNode",
+			"Type": "AWS::AppMesh::VirtualService",
+			  "Properties": {
+				"MeshName": {"Ref" : "AppMeshName"},
+				"VirtualServiceName":{
+					   "Fn::Join": [
+							".",
+							[{"Fn::GetAtt": ["orderservcustorchestrtnServiceDiscovery", "Name"]},{"Fn::Sub" : "orderserv-${Environment}-${Tenant}-pvt-dns-ns"}]
+						]
+					  },
+				"Spec": {
+				  "Provider": {
+					"VirtualNode": {
+					  "VirtualNodeName": {"Fn::GetAtt": ["orderservcustorchestrtnAppMeshNode", "VirtualNodeName"]}
+					}
+				  }
+				},
+				"Tags": [
+						{"Key": "Name", "Value": {
+							"Fn::Join": [
+							".",
+								[{"Fn::GetAtt": ["orderservcustorchestrtnServiceDiscovery", "Name"]},
+								{"Fn::Sub" : "orderserv-${Environment}-${Tenant}-pvt-dns-ns"}]
+								]} 
+						}, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }}
+                ]
+			  }
+		}
+	}
+}

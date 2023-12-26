@@ -1,0 +1,281 @@
+{
+    "Parameters": {
+        "Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+        "AppName": {
+            "Type": "String",
+            "Default": "order-serv",
+            "Description": "Application Name"
+        }
+    },
+    "Resources": {
+        "MenuCatalogsS3Bucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "BucketName": {
+                    "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-menu-catalogs"
+                },
+                "AccessControl": "Private",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-menu-catalogs"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    },
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    }
+                ],
+                "PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": true,
+                    "BlockPublicPolicy": true,
+                    "IgnorePublicAcls": true,
+                    "RestrictPublicBuckets": true
+                },
+				"BucketEncryption": { 
+					"ServerSideEncryptionConfiguration": [ 
+					{ 
+						"ServerSideEncryptionByDefault": 
+							{	 
+								"SSEAlgorithm": "AES256" 
+							} 
+						} 
+					] 
+				}
+            }
+        },
+        "OLOContentS3Bucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "BucketName": {
+                    "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-olo-content"
+                },
+                "AccessControl": "Private",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-olo-content"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    },
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    }
+                ],
+				"PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": true,
+                    "BlockPublicPolicy": true,
+                    "IgnorePublicAcls": true,
+                    "RestrictPublicBuckets": true
+                },
+				"BucketEncryption": { 
+					"ServerSideEncryptionConfiguration": [ 
+					{ 
+						"ServerSideEncryptionByDefault": 
+							{	 
+								"SSEAlgorithm": "AES256" 
+							} 
+						} 
+					] 
+				}
+            }
+        },
+		"OrdersS3Bucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "BucketName": {
+                    "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-${Tenant}-orders"
+                },
+                "AccessControl": "Private",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-${Tenant}-orders"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    },
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    }
+                ],
+				"PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": true,
+                    "BlockPublicPolicy": true,
+                    "IgnorePublicAcls": true,
+                    "RestrictPublicBuckets": true
+                },
+				"BucketEncryption": { 
+					"ServerSideEncryptionConfiguration": [ 
+					{ 
+						"ServerSideEncryptionByDefault": 
+							{	 
+								"SSEAlgorithm": "AES256" 
+							} 
+						} 
+					] 
+				}
+            }
+        },
+		"AdminUIS3Bucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "BucketName": {
+                    "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-${Tenant}-admin-ui"
+                },
+                "AccessControl": "PublicRead",
+				"WebsiteConfiguration": {
+                    "IndexDocument": "index.html",
+                    "ErrorDocument": "index.html"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-${Tenant}-admin-ui"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    },
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    }
+                ],
+				"PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": false,
+                    "BlockPublicPolicy": false,
+                    "IgnorePublicAcls": false,
+                    "RestrictPublicBuckets": false
+                },
+				"BucketEncryption": { 
+					"ServerSideEncryptionConfiguration": [ 
+					{ 
+						"ServerSideEncryptionByDefault": 
+							{	 
+								"SSEAlgorithm": "AES256" 
+							} 
+						} 
+					] 
+				}
+            }
+        },
+		"BucketPolicy": {
+            "Type": "AWS::S3::BucketPolicy",
+            "Properties": {
+                "PolicyDocument": {
+                    "Id": "s3Policy",
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Sid": "PublicReadForGetBucketObjects",
+                            "Effect": "Allow",
+                            "Principal": "*",
+                            "Action": "s3:GetObject",
+                            "Resource": {
+                                "Fn::Join": [
+                                    "",
+                                    [
+                                        "arn:aws:s3:::",
+                                        {
+                                            "Ref": "AdminUIS3Bucket"
+                                        },
+                                        "/*"
+                                    ]
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "Bucket": {
+                    "Ref": "AdminUIS3Bucket"
+                }
+            }
+        }
+    },
+    "Outputs": {
+        "TenantS3Bucket": {
+            "Description": "S3 Bucket for tenant data",
+            "Value": {
+                "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-${Tenant}-s3-data"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-s3"
+                }
+            }
+        },
+        "StaticWebS3Bucket": {
+            "Description": "S3 Bucket for tenant data",
+            "Value": {
+                "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-${Tenant}-admin-ui"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-staticweb-s3"
+                }
+            }
+        },
+		"OrdersS3Bucket": {
+            "Description": "S3 Bucket for tenant data",
+            "Value": {
+                "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-${Tenant}-orders"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orders"
+                }
+            }
+        },
+		"AdminUIS3Bucket": {
+            "Description": "S3 Bucket for tenant data",
+            "Value": {
+                "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-${Tenant}-admin-ui"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-admin-ui"
+                }
+            }
+        }
+    }
+}

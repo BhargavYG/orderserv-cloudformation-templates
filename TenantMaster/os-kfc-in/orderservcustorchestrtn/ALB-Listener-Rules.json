@@ -1,0 +1,81 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "AWS CloudFormation Template for ALB listners Rules of ${Tenant}",
+    "Parameters":{
+		"ServiceTargetGroupStackName":{
+			"Type": "String",
+			"Description": "Enter the Stack Name of ServiceTargetGroups"
+        },
+		"ListenerArn":{
+			"Type": "String",
+			"Description": "ALB ListenerArn"
+        },
+		"TenantId":{
+			"Type": "String",
+			"Description": "Tenant Id for request routing"
+        },
+		"Tenant": {
+			"Type": "String",
+			"Description": "Enter the tenant/country key",
+			"Default": "os-kfc-in",
+			"MaxLength": 9,
+			"MinLength": 9
+		}
+	},
+	"Resources": {
+		"orderservcustorchestrtnTargetGroupListenerRule":{
+			"Type":"AWS::ElasticLoadBalancingV2::ListenerRule",
+			"Properties":{
+				 "Actions":[
+				{
+					 "Type":"forward",
+					 "TargetGroupArn":{"Fn::ImportValue" :  {"Fn::Sub": "${ServiceTargetGroupStackName}-orderservcustorchestrtnTargetGroup"} } 
+				}
+				],
+				 "Conditions":[
+				 {
+					 "Field":"http-header",
+					 "HttpHeaderConfig" : {
+						  "HttpHeaderName" : "x-tenant-id",
+						  "Values" : [{"Ref": "TenantId"}]
+					 }
+				 },
+				  {
+					 "Field":"path-pattern",
+					 "PathPatternConfig" : {
+						 "Values" : ["/v1/customer-orchestration-service/*"]
+					 }
+				 }
+				],
+			 "ListenerArn":{
+                   "Ref": "ListenerArn"
+                },
+			 "Priority": 18
+			}
+        },
+		"orderservcustorchestrtnSwaggerTargetGroupListenerRule":{
+			"Type":"AWS::ElasticLoadBalancingV2::ListenerRule",
+			"Properties":{
+				 "Actions":[
+				{
+					 "Type":"forward",
+					 "TargetGroupArn":{"Fn::ImportValue" :  {"Fn::Sub": "${ServiceTargetGroupStackName}-orderservcustorchestrtnTargetGroup"} } 
+				}
+				],
+				 "Conditions":[
+				  {
+					 "Field":"path-pattern",
+					 "PathPatternConfig" : {
+						 "Values" : ["/customer-orchestration-swagger*"]
+					 }
+				 }
+				],
+			 "ListenerArn":{
+                   "Ref": "ListenerArn"
+                },
+			 "Priority": 120
+			}
+        }
+	}
+}
+		

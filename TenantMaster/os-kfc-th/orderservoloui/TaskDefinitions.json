@@ -1,0 +1,131 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "AWS CloudFormation Template for Task Definitions",
+    "Parameters": {
+        "Environment": {
+            "Type": "String",
+            "Description": "Enter the environment name as dev/perf/qa/uat/sec/prod//pen/uat1",
+            "AllowedValues" : ["dev","perf","qa","uat","prod","pen"],
+            "Default": "dev",
+            "MaxLength": 4,
+            "MinLength": 2
+        },
+        "Tenant": {
+            "Type": "String",
+            "Description": "Enter the tenant/country key",
+            "Default": "os-kfc-th",
+            "MaxLength": 9,
+            "MinLength": 9
+        },
+        "AppName": {
+            "Type": "String",
+            "Default": "orderserv",
+            "Description": "Application Name"
+        },
+        "TenantRolePolicyStackName": {
+            "Type": "String",
+            "Description": "Enter the TenantRolePolicyStackName"
+        },
+        "secretID": {
+            "Type": "String",
+            "Default": "development/gitlabtoken-qjgcc0",
+            "Description": "Enter the secret ID for gitlab authentication"
+        },
+		"ECRAcntID" :{
+			"Type": "String",
+            "Description": "Enter the ECR account ID"		
+		}
+    },
+    "Conditions": {
+        "IsDev": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Environment"
+                },
+                "dev"
+            ]
+        }
+    },
+    "Resources": {
+        "orderservolouitaskdef": {
+            "Type": "AWS::ECS::TaskDefinition",
+            "Properties": {
+                "TaskRoleArn": {
+                    "Fn::ImportValue": {
+                        "Fn::Sub": "${TenantRolePolicyStackName}-ECSTaskRoleARN"
+                    }
+                },
+                "ExecutionRoleArn": {
+                    "Fn::ImportValue": {
+                        "Fn::Sub": "${TenantRolePolicyStackName}-ECSExecutionRoleARN"
+                    }
+                },
+                "NetworkMode": "awsvpc",
+                "Cpu": 512,
+				"Memory": 1024,
+                "Family": {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-orderservoloui"
+                },
+                "Tags" : [
+					{"Key": "Name", "Value": {"Fn::Sub": "orderserv-${Environment}-${Tenant}-orderservoloui"} }, 
+					{"Key": "AppName", "Value": {"Fn::Join" : ["-",[{ "Ref": "AppName" },"ui"]]}},
+					{"Key": "Environment", "Value": { "Ref": "Environment" }},
+					{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+                ],
+                "ContainerDefinitions": [                    
+					{
+						"Name": "orderserv-olo-ui",
+						"MountPoints": [],
+						"Image": "registry.gitlab.yum.com/kfc-global/progressive-web-app/kfc-pwa/yum-pwa-qa-in:1105",
+						"repositoryCredentials": {
+							"credentialsParameter": {
+								"Fn::Sub": "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${secretID}"
+							}
+						},
+						"Cpu": 256,
+						"PortMappings": [
+							{
+								"Protocol": "tcp",
+								"ContainerPort": 8080,
+								"HostPort": 8080
+							}
+						],
+						"Memory": 512,
+						"Essential": true,
+						"LogConfiguration": {
+							"LogDriver": "awslogs",
+							"Options": {
+								"awslogs-group": {
+									"Fn::Sub": "orderserv-${Environment}-${Tenant}-ecs"
+								},
+								"awslogs-region": {
+									"Fn::Sub": "${AWS::Region}"
+								},
+								"awslogs-stream-prefix": {
+									"Fn::Sub": "orderserv-olo-ui"
+								}
+							}
+						}
+					}                    
+                ]
+            }
+        }
+    },
+    "Outputs": {
+        "TaskDefStackName": {
+            "Value": {
+                "Fn::Sub": "${AWS::StackName}"
+            }
+        },
+        "orderservolouitaskdef": {
+            "Value": {
+                "Ref": "orderservolouitaskdef"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservolouitaskdef"
+                }
+            }
+        }
+    }
+}

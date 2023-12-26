@@ -1,0 +1,492 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "AWS CloudFormation Template for SecurityGroups",
+    "Parameters": {
+        "VpcId":{
+            "Type":"AWS::EC2::VPC::Id",
+            "Description":"Select the VPC"
+        },
+        "ALBSGID": {
+            "Type": "String",
+            "Description": "Enter the ALB Security Group"
+        },
+		"VPCEApiGwSecurityGroup": {
+            "Type": "String",
+            "Description": "Enter the VPC Security Group for Api Gateway"
+        },
+        "OutboundCidrRange": {
+            "Type": "String",
+            "Default": "0.0.0.0/0",
+            "Description": "OutBound CIDR Range"
+        },
+        "Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+        "Tenant": {
+			"Type": "String",
+			"Description": "Enter the tenant/country key",
+			"Default": "os-kfc-in",
+			"MaxLength": 9,
+			"MinLength": 9
+		},
+        "AppName": {
+            "Type": "String",
+            "Default": "orderserv",
+            "Description": "Application Name"
+        }   
+    },
+	"Conditions": {
+        "IsIndTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-in"
+            ]
+        },
+		"IsAusTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-au"
+            ]
+        },
+		"IsJapTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-jp"
+            ]
+        },
+		"IsThaTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-th"
+            ]
+        }
+	},
+    "Resources": {
+		"redisSecurityGroup" : {
+            "Type" : "AWS::EC2::SecurityGroup",
+			"Condition": "IsAusTenant",
+			"DependsOn" : "LambdaSecurityGroup",
+            "Properties" : {
+                "GroupName" : {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-redis-sg"
+                },
+                "GroupDescription" : {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-redis-sg"
+                },
+                "VpcId" : {"Ref" : "VpcId"},
+                "Tags": [
+                        {"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-redis-sg" } }, 
+                        {"Key": "AppName", "Value": { "Ref": "AppName" }},
+                        {"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+                ],
+                "SecurityGroupIngress" : [ 
+                    { "IpProtocol": "tcp", "FromPort": 6379, "ToPort": 6379, "SourceSecurityGroupId": { "Ref": "LambdaSecurityGroup"} , "Description": "Access from Lambda Security Group"}
+                    ],
+                "SecurityGroupEgress": [
+                    { "IpProtocol": "-1", "CidrIp": { "Ref": "OutboundCidrRange"} }
+                    ]
+            }
+        },
+		"redisJPSecurityGroup" : {
+            "Type" : "AWS::EC2::SecurityGroup",
+			"Condition": "IsJapTenant",
+			"DependsOn" : "LambdaSecurityGroup",
+            "Properties" : {
+                "GroupName" : {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-redis-sg"
+                },
+                "GroupDescription" : {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-redis-sg"
+                },
+                "VpcId" : {"Ref" : "VpcId"},
+                "Tags": [
+                        {"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-redis-sg" } }, 
+                        {"Key": "AppName", "Value": { "Ref": "AppName" }},
+                        {"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+                ],
+                "SecurityGroupIngress" : [ 
+                    { "IpProtocol": "tcp", "FromPort": 6379, "ToPort": 6379, "SourceSecurityGroupId": { "Ref": "LambdaSecurityGroup"} , "Description": "Access from Lambda Security Group"}
+                    ],
+                "SecurityGroupEgress": [
+                    { "IpProtocol": "-1", "CidrIp": { "Ref": "OutboundCidrRange"} }
+                    ]
+            }
+        },
+		"redisTHSecurityGroup" : {
+            "Type" : "AWS::EC2::SecurityGroup",
+			"Condition": "IsThaTenant",
+			"DependsOn" : "LambdaSecurityGroup",
+            "Properties" : {
+                "GroupName" : {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-redis-sg"
+                },
+                "GroupDescription" : {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-redis-sg"
+                },
+                "VpcId" : {"Ref" : "VpcId"},
+                "Tags": [
+                        {"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-redis-sg" } }, 
+                        {"Key": "AppName", "Value": { "Ref": "AppName" }},
+                        {"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+                ],
+                "SecurityGroupIngress" : [ 
+                    { "IpProtocol": "tcp", "FromPort": 6379, "ToPort": 6379, "SourceSecurityGroupId": { "Ref": "LambdaSecurityGroup"} , "Description": "Access from Lambda Security Group"}
+                    ],
+                "SecurityGroupEgress": [
+                    { "IpProtocol": "-1", "CidrIp": { "Ref": "OutboundCidrRange"} }
+                    ]
+            }
+        },
+		"OloRedisSecurityGroup" : {
+            "Type" : "AWS::EC2::SecurityGroup",
+			"DependsOn" : "ecsUISecurityGroup",
+            "Properties" : {
+                "GroupName" : {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-olo-redis-sg"
+                },
+                "GroupDescription" : {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-olo-redis-sg"
+                },
+                "VpcId" : {"Ref" : "VpcId"},
+                "Tags": [
+                        {"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-olo-redis-sg" } }, 
+                        {"Key": "AppName", "Value": {"Fn::Join" : ["-",[{ "Ref": "AppName" },"ui"]]}},
+                        {"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+                ],
+                "SecurityGroupIngress" : [ 
+                    { "IpProtocol": "tcp", "FromPort": 6379, "ToPort": 6379, "SourceSecurityGroupId": { "Ref": "ecsUISecurityGroup"} , "Description": "Access from UI Security Group"}
+                    ],
+                "SecurityGroupEgress": [
+                    { "IpProtocol": "-1", "CidrIp": { "Ref": "OutboundCidrRange"} }
+                    ]
+            }
+        },
+        "ecsSecurityGroup" : {
+            "Type" : "AWS::EC2::SecurityGroup",
+            "Properties" : {
+                "GroupName" : {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-ecs-sg"
+                },
+                "GroupDescription" : {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-ecs-sg"
+                },
+                "VpcId" : {"Ref" : "VpcId"},
+                "Tags": [
+                        {"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-ecs-sg" } }, 
+                        {"Key": "AppName", "Value": { "Ref": "AppName" }},
+                        {"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+                ],
+                "SecurityGroupIngress" : [ 
+                    { "IpProtocol": "tcp", "FromPort": 80, "ToPort": 80, "SourceSecurityGroupId": { "Ref": "ALBSGID"} , "Description": "Access from ALB"},
+                    { "IpProtocol": "tcp", "FromPort": 8001, "ToPort": 9999, "SourceSecurityGroupId": { "Ref": "ALBSGID"}, "Description": "Access from ALB"  }
+                    ],
+                "SecurityGroupEgress": [
+                    { "IpProtocol": "-1", "CidrIp": { "Ref": "OutboundCidrRange"} }
+                    ]
+            }
+        },
+		"ecsUISecurityGroup" : {
+            "Type" : "AWS::EC2::SecurityGroup",
+            "Properties" : {
+                "GroupName" : {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-ecs-ui-sg"
+                },
+                "GroupDescription" : {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-ecs-ui-sg"
+                },
+                "VpcId" : {"Ref" : "VpcId"},
+                "Tags": [
+                        {"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-ecs-ui-sg" } }, 
+                        {"Key": "AppName", "Value": { "Ref": "AppName" }},
+                        {"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+                ],
+                "SecurityGroupIngress" : [ 
+                    { "IpProtocol": "tcp", "FromPort": 80, "ToPort": 80, "SourceSecurityGroupId": { "Ref": "ALBSGID"} , "Description": "Access from ALB"},
+                    { "IpProtocol": "tcp", "FromPort": 8080, "ToPort": 8080, "SourceSecurityGroupId": { "Ref": "ALBSGID"}, "Description": "Access from ALB"  }
+                    ],
+                "SecurityGroupEgress": [
+                    { "IpProtocol": "-1", "CidrIp": { "Ref": "OutboundCidrRange"} }
+                    ]
+            }
+        },
+        "ecsSecurityGroupSelfRefrenceIngress":
+        {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "DependsOn" : "ecsSecurityGroup",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "ecsSecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": 8001,
+                "ToPort": 9999,
+                "SourceSecurityGroupId": {
+                    "Ref": "ecsSecurityGroup"
+                },
+                "Description": "Self Access for Service Discovery"
+            }
+        },
+		"SGALBIngressECSSG": {
+			"DependsOn" : "ecsSecurityGroup",
+			"Type": "AWS::EC2::SecurityGroupIngress",
+			"Properties" : {   
+				"GroupId": { "Ref": "ALBSGID"},
+				"IpProtocol": "tcp",
+				"FromPort": "443",
+				"ToPort": "443",
+				"SourceSecurityGroupId": {
+                    "Ref": "ecsSecurityGroup"
+                }
+			}
+		},
+		"SGLambdaIngressECSSG": {
+			"DependsOn" : "ecsSecurityGroup",
+			"Type": "AWS::EC2::SecurityGroupIngress",
+			"DependsOn" : ["LambdaSecurityGroup","ecsSecurityGroup"],
+			"Properties" : {   
+				"GroupId": { "Ref": "ecsSecurityGroup"},
+				"IpProtocol": "tcp",
+				"FromPort": "8001",
+				"ToPort": "9999",
+				"SourceSecurityGroupId": {
+                    "Ref": "LambdaSecurityGroup"
+                }
+			}
+		},
+		"DatabaseSecurityGroup" : {
+            "Type" : "AWS::EC2::SecurityGroup",
+            "Properties" : {
+                "GroupName" : {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-db-sg"
+                },
+                "GroupDescription" : {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-db-sg"
+                },
+                "VpcId" : {"Ref" : "VpcId"},
+                "Tags": [
+                        {"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-DB-SG" } }, 
+                        {"Key": "AppName", "Value": { "Ref": "AppName" }},
+                        {"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+                ],
+                "SecurityGroupIngress" : [ 
+                    { "IpProtocol": "tcp", "FromPort": 3306, "ToPort": 3306, "SourceSecurityGroupId": { "Ref": "ecsSecurityGroup"}, "Description": "Access from App Subnet"  },
+					{ "IpProtocol": "tcp", "FromPort": 3306, "ToPort": 3306, "SourceSecurityGroupId": { "Ref": "LambdaSecurityGroup"}, "Description": "Access from Lambda Subnet"  }	
+                    ],
+                "SecurityGroupEgress": [
+                    { "IpProtocol": "-1", "CidrIp": { "Ref": "OutboundCidrRange"} }
+                    ]
+            }
+        },
+		"LambdaSecurityGroup" : {
+            "Type" : "AWS::EC2::SecurityGroup",
+            "Properties" : {
+                "GroupName" : {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-Lambda-sg"
+                },
+                "GroupDescription" : {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-Lambda-sg"
+                },
+                "VpcId" : {"Ref" : "VpcId"},
+                "Tags": [
+                        {"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-Lambda-SG" } }, 
+                        {"Key": "AppName", "Value": { "Ref": "AppName" }},
+                        {"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+                ],
+                "SecurityGroupIngress" : [ 
+                    { "IpProtocol": "tcp", "FromPort": 8001, "ToPort": 9999, "SourceSecurityGroupId": { "Ref": "ALBSGID"}, "Description": "Access from ALB"  }
+					],
+                "SecurityGroupEgress": [
+                    { "IpProtocol": "-1", "CidrIp": { "Ref": "OutboundCidrRange"} }
+                    ]
+            }
+        },
+		"LambdaSecurityGroupToVPCESG":
+        {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "DependsOn" : "LambdaSecurityGroup",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "VPCEApiGwSecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": 443,
+                "ToPort": 443,
+                "SourceSecurityGroupId": {
+                    "Ref": "LambdaSecurityGroup"
+                },
+                "Description": "Lambda to VPCE Access"
+            }
+        },
+		"ecsCCSecurityGroup" : {
+            "Type" : "AWS::EC2::SecurityGroup",
+			"Condition" : "IsIndTenant",
+            "Properties" : {
+                "GroupName" : {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-ecs-cc-sg"
+                },
+                "GroupDescription" : {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-ecs-cc-sg"
+                },
+                "VpcId" : {"Ref" : "VpcId"},
+                "Tags": [
+                        {"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-ecs-cc-sg" } }, 
+                        {"Key": "AppName", "Value": { "Ref": "AppName" }},
+                        {"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+                ],
+                "SecurityGroupIngress" : [ 
+                    { "IpProtocol": "tcp", "FromPort": 80, "ToPort": 80, "SourceSecurityGroupId": { "Ref": "ALBSGID"} , "Description": "Access from ALB"},
+                    { "IpProtocol": "tcp", "FromPort": 8103, "ToPort": 8103, "SourceSecurityGroupId": { "Ref": "ALBSGID"}, "Description": "Access from ALB"  }
+                    ],
+                "SecurityGroupEgress": [
+                    { "IpProtocol": "-1", "CidrIp": { "Ref": "OutboundCidrRange"} }
+                    ]
+            }
+        },
+		"CallCenterSgToDBSecurityGroup": {
+			"DependsOn" : ["DatabaseSecurityGroup","ecsCCSecurityGroup"],
+			"Type": "AWS::EC2::SecurityGroupIngress",
+			"Condition" : "IsIndTenant",
+			"Properties" : {   
+				"GroupId": { "Ref": "DatabaseSecurityGroup"},
+				"IpProtocol": "tcp",
+                "FromPort": 3306,
+                "ToPort": 3306,
+                "SourceSecurityGroupId": {
+                    "Ref": "ecsCCSecurityGroup"
+                },
+                "Description": "Call Center SG Access"
+			}
+		},
+		"CallCenterSgToECSSecurityGroup": {
+			"DependsOn" : ["ecsSecurityGroup","ecsCCSecurityGroup"],
+			"Condition" : "IsIndTenant",
+			"Type": "AWS::EC2::SecurityGroupIngress",
+			"Properties" : {   
+				"GroupId": { "Ref": "ecsSecurityGroup"},
+				"IpProtocol": "tcp",
+                "FromPort": 8001,
+                "ToPort": 9999,
+                "SourceSecurityGroupId": {
+                    "Ref": "ecsCCSecurityGroup"
+                },
+                "Description": "Call Center SG Access"
+			}
+		}
+    },
+    "Outputs": {
+		"RedisSecurityGroup": {
+			"Condition": "IsAusTenant",
+            "Description": "ECS App Security Group",
+            "Value": {
+                "Ref": "redisSecurityGroup"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-RedisSecurityGroup"
+                }
+            }
+        },
+		"RedisJPSecurityGroup": {
+			"Condition": "IsJapTenant",
+            "Description": "ECS App Security Group",
+            "Value": {
+                "Ref": "redisJPSecurityGroup"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-RedisJPSecurityGroup"
+                }
+            }
+        },
+		"RedisTHSecurityGroup": {
+			"Condition": "IsThaTenant",
+            "Description": "ECS App Security Group",
+            "Value": {
+                "Ref": "redisTHSecurityGroup"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-RedisTHSecurityGroup"
+                }
+            }
+        },
+        "ECSSecurityGroup": {
+            "Description": "ECS App Security Group",
+            "Value": {
+                "Ref": "ecsSecurityGroup"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-ECSSecurityGroup"
+                }
+            }
+        },
+		"DatabaseSecurityGroup": {
+			"Description": "Database Security Group",
+			"Value":  {
+				"Ref": "DatabaseSecurityGroup"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-DatabaseSecurityGroup"
+                }
+            }
+        },
+		"ecsUISecurityGroup": {
+			"Description": "UI Security Group",
+			"Value":  {
+				"Ref": "ecsUISecurityGroup"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-ecsUISecurityGroup"
+                }
+            }
+        },
+		"LambdaSecurityGroup": {
+			"Description": "Lambda Security Group",
+			"Value":  {
+				"Ref": "LambdaSecurityGroup"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-LambdaSecurityGroup"
+                }
+            }
+        },
+		"ecsCCSecurityGroup": {
+			"Condition" : "IsIndTenant",
+			"Description": "Call Center Security Group",
+			"Value":  {
+				"Ref": "ecsCCSecurityGroup"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-ecsCCSecurityGroup"
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,2508 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description" :  "Stack to create Dynamo DB Table. It will be of format <environment>.<tenant>.<table>",
+    "Parameters":{
+		"Tenant": {
+			"Type": "String",
+			"Description": "Enter the tenant/country key",
+			"Default": "os-kfc-in",
+			"MaxLength": 9,
+			"MinLength": 9
+		},
+		"Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"AppName": {
+			"Type": "String",
+			"Default": "order-serv",
+			"Description": "Application Name"
+		},
+		"TenantRolePolicyStackName" :{
+			"Type": "String",
+			"Default": "TenantRolePolicyStackName",
+			"Description": "Stack Name for the TenantRolePolicy"			
+		}
+	},
+	"Conditions": {
+        "IsIndTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-in"
+            ]
+        },
+		"IsAusTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-au"
+            ]
+        },
+		"IsJapTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-jp"
+            ]
+        },
+		"IsThaTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-th"
+            ]
+        }
+    },
+	"Resources": {
+		"DeliveryPartnerTransactionTable": {
+            "Type": "AWS::DynamoDB::Table",
+			"Condition" : "IsAusTenant",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.deliverypartner-transaction-log" },
+				"BillingMode" : "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+					{
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+					{
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.deliverypartner-transaction-log"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"DeliveryPartnerTransactionTHATable": {
+            "Type": "AWS::DynamoDB::Table",
+			"Condition" : "IsThaTenant",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.deliverypartner-transaction-log" },
+				"BillingMode" : "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+					{
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+					{
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.deliverypartner-transaction-log"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"DeliveryPartnerTransactionJAPTable": {
+            "Type": "AWS::DynamoDB::Table",
+			"Condition" : "IsJapTenant",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.deliverypartner-transaction-log" },
+				"BillingMode" : "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+					{
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+					{
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.deliverypartner-transaction-log"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"TenantConfigTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.tenant-configurations" },
+				"BillingMode" : "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+					{
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+					{
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.tenant-configurations"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"OrderRefNumber": {
+            "Type": "AWS::DynamoDB::Table",
+			"Condition" : "IsAusTenant",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.order-ref-number" },
+				"BillingMode" : "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+					{
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+					{
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.order-ref-number"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"OrderRefNumberJAP": {
+            "Type": "AWS::DynamoDB::Table",
+			"Condition" : "IsJapTenant",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.order-ref-number" },
+				"BillingMode" : "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+					{
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+					{
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.order-ref-number"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"OrderRefNumberTHA": {
+            "Type": "AWS::DynamoDB::Table",
+			"Condition" : "IsThaTenant",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.order-ref-number" },
+				"BillingMode" : "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+					{
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+					{
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.order-ref-number"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"AllItemsTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.all-items" },
+				"BillingMode" : "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.all-items"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"CouponWalletsTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.couponwallets" },
+				"BillingMode" : "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.couponwallets"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"CustomersTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.customers" },
+				"BillingMode" : "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.customers"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"ItemMasterTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.item-master" },
+				"BillingMode" : "PAY_PER_REQUEST",
+				"GlobalSecondaryIndexes" : [ {
+					"IndexName" : {"Fn::Sub" : "${Environment}.${Tenant}.CatalogItemsIndex" },
+					"KeySchema": [
+						{
+							"AttributeName": "gspkey",
+							"KeyType": "HASH"
+						},
+						{
+							"AttributeName": "gsskey",
+							"KeyType": "RANGE"
+						}],
+					"Projection" : {
+						"ProjectionType" : "KEYS_ONLY"
+					}
+					}],
+				"StreamSpecification": {
+					"StreamViewType": "NEW_AND_OLD_IMAGES"
+					},
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    },
+					 {
+                        "AttributeName": "gspkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "gsskey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.item-master"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"OrderHistoryTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.orderhistory" },
+				"BillingMode" : "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.orderhistory"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"StoreBatchStatusTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.store-batch-status" },
+				"BillingMode" : "PAY_PER_REQUEST",
+				"GlobalSecondaryIndexes" : [ {
+					"IndexName" : {"Fn::Sub" : "${Environment}.${Tenant}.RulesIndex" },
+					"KeySchema": [
+						{
+							"AttributeName": "gspkey",
+							"KeyType": "HASH"
+						},
+						{
+							"AttributeName": "gsskey",
+							"KeyType": "RANGE"
+						}],
+					"Projection" : {
+						"ProjectionType" : "ALL"
+					}
+					}],
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    },
+					{
+                        "AttributeName": "gspkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "gsskey",
+                        "AttributeType": "S"
+                    }
+					
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.store-batch-status"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"RecommendationRulesTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.recomendation-rules" },
+				"BillingMode" : "PAY_PER_REQUEST",
+				"GlobalSecondaryIndexes" : [ {
+					"IndexName" : {"Fn::Sub" : "${Environment}.${Tenant}.RulesIndex" },
+					"KeySchema": [
+						{
+							"AttributeName": "gsipkey",
+							"KeyType": "HASH"
+						},
+						{
+							"AttributeName": "gsiskey",
+							"KeyType": "RANGE"
+						}],
+					"Projection" : {
+						"ProjectionType" : "ALL"
+					}
+					}],
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    },
+					{
+                        "AttributeName": "gsipkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "gsiskey",
+                        "AttributeType": "S"
+                    }
+					
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.recommendation-rules"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"StoreMasterTable": {
+            "Type": "AWS::DynamoDB::Table",
+			"Condition" : "IsIndTenant",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.store-master" },
+				"BillingMode" : "PAY_PER_REQUEST",
+				"GlobalSecondaryIndexes" : [ {
+					"IndexName" : {"Fn::Sub" : "${Environment}.${Tenant}.OperationIndex" },
+					"KeySchema": [
+						{
+							"AttributeName": "gspkey",
+							"KeyType": "HASH"
+						},
+						{
+							"AttributeName": "gsskey",
+							"KeyType": "RANGE"
+						}],
+					"Projection" : {
+						"ProjectionType" : "ALL"
+					}
+					}],
+				"LocalSecondaryIndexes" : [ {
+					"IndexName" : {"Fn::Sub" : "${Environment}.${Tenant}.ExclusionIndex" },
+					"KeySchema": [
+						{
+							"AttributeName": "pkey",
+							"KeyType": "HASH"
+						},
+						{
+							"AttributeName": "StartDateInEpoch",
+							"KeyType": "RANGE"
+						}],
+					"Projection" : {
+						"ProjectionType" : "ALL"
+					}
+					}],
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    },
+					{
+                        "AttributeName": "gspkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "gsskey",
+                        "AttributeType": "S"
+                    },
+					{
+                        "AttributeName": "StartDateInEpoch",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.store-master"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"StoreMasterAUSTable": {
+            "Type": "AWS::DynamoDB::Table",
+			"Condition" : "IsAusTenant",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.store-master" },
+				"BillingMode" : "PAY_PER_REQUEST",
+				"GlobalSecondaryIndexes" : [ {
+					"IndexName" : {"Fn::Sub" : "${Environment}.${Tenant}.OperationIndex" },
+					"KeySchema": [
+						{
+							"AttributeName": "gspkey",
+							"KeyType": "HASH"
+						},
+						{
+							"AttributeName": "gsskey",
+							"KeyType": "RANGE"
+						}],
+					"Projection" : {
+						"ProjectionType" : "ALL"
+					}
+					},
+					{ 
+					"IndexName" : {"Fn::Sub" : "${Environment}.${Tenant}.ExclusionEntityTypeIndex" },
+					"KeySchema": [
+						{
+							"AttributeName": "gspkey1",
+							"KeyType": "HASH"
+						},
+						{
+							"AttributeName": "gsskey1",
+							"KeyType": "RANGE"
+						}],
+					"Projection" : {
+						"ProjectionType" : "ALL"
+					}
+					}],
+				"LocalSecondaryIndexes" : [ {
+					"IndexName" : {"Fn::Sub" : "${Environment}.${Tenant}.ExclusionIndex" },
+					"KeySchema": [
+						{
+							"AttributeName": "pkey",
+							"KeyType": "HASH"
+						},
+						{
+							"AttributeName": "StartDateInEpoch",
+							"KeyType": "RANGE"
+						}],
+					"Projection" : {
+						"ProjectionType" : "ALL"
+					}
+					}],
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    },
+					{
+                        "AttributeName": "gspkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "gsskey",
+                        "AttributeType": "S"
+                    },
+					{
+                        "AttributeName": "gspkey1",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "gsskey1",
+                        "AttributeType": "S"
+                    },
+					{
+                        "AttributeName": "StartDateInEpoch",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.store-master"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"StoreMasterJAPTable": {
+            "Type": "AWS::DynamoDB::Table",
+			"Condition" : "IsJapTenant",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.store-master" },
+				"BillingMode" : "PAY_PER_REQUEST",
+				"GlobalSecondaryIndexes" : [ {
+					"IndexName" : {"Fn::Sub" : "${Environment}.${Tenant}.OperationIndex" },
+					"KeySchema": [
+						{
+							"AttributeName": "gspkey",
+							"KeyType": "HASH"
+						},
+						{
+							"AttributeName": "gsskey",
+							"KeyType": "RANGE"
+						}],
+					"Projection" : {
+						"ProjectionType" : "ALL"
+					}
+					},
+					{ 
+					"IndexName" : {"Fn::Sub" : "${Environment}.${Tenant}.ExclusionEntityTypeIndex" },
+					"KeySchema": [
+						{
+							"AttributeName": "gspkey1",
+							"KeyType": "HASH"
+						},
+						{
+							"AttributeName": "gsskey1",
+							"KeyType": "RANGE"
+						}],
+					"Projection" : {
+						"ProjectionType" : "ALL"
+					}
+					}],
+				"LocalSecondaryIndexes" : [ {
+					"IndexName" : {"Fn::Sub" : "${Environment}.${Tenant}.ExclusionIndex" },
+					"KeySchema": [
+						{
+							"AttributeName": "pkey",
+							"KeyType": "HASH"
+						},
+						{
+							"AttributeName": "StartDateInEpoch",
+							"KeyType": "RANGE"
+						}],
+					"Projection" : {
+						"ProjectionType" : "ALL"
+					}
+					}],
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    },
+					{
+                        "AttributeName": "gspkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "gsskey",
+                        "AttributeType": "S"
+                    },
+					{
+                        "AttributeName": "gspkey1",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "gsskey1",
+                        "AttributeType": "S"
+                    },
+					{
+                        "AttributeName": "StartDateInEpoch",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.store-master"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"StoreMasterTHATable": {
+            "Type": "AWS::DynamoDB::Table",
+			"Condition" : "IsThaTenant",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.store-master" },
+				"BillingMode" : "PAY_PER_REQUEST",
+				"GlobalSecondaryIndexes" : [ {
+					"IndexName" : {"Fn::Sub" : "${Environment}.${Tenant}.OperationIndex" },
+					"KeySchema": [
+						{
+							"AttributeName": "gspkey",
+							"KeyType": "HASH"
+						},
+						{
+							"AttributeName": "gsskey",
+							"KeyType": "RANGE"
+						}],
+					"Projection" : {
+						"ProjectionType" : "ALL"
+					}
+					},
+					{ 
+					"IndexName" : {"Fn::Sub" : "${Environment}.${Tenant}.ExclusionEntityTypeIndex" },
+					"KeySchema": [
+						{
+							"AttributeName": "gspkey1",
+							"KeyType": "HASH"
+						},
+						{
+							"AttributeName": "gsskey1",
+							"KeyType": "RANGE"
+						}],
+					"Projection" : {
+						"ProjectionType" : "ALL"
+					}
+					}],
+				"LocalSecondaryIndexes" : [ {
+					"IndexName" : {"Fn::Sub" : "${Environment}.${Tenant}.ExclusionIndex" },
+					"KeySchema": [
+						{
+							"AttributeName": "pkey",
+							"KeyType": "HASH"
+						},
+						{
+							"AttributeName": "StartDateInEpoch",
+							"KeyType": "RANGE"
+						}],
+					"Projection" : {
+						"ProjectionType" : "ALL"
+					}
+					}],
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    },
+					{
+                        "AttributeName": "gspkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "gsskey",
+                        "AttributeType": "S"
+                    },
+					{
+                        "AttributeName": "gspkey1",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "gsskey1",
+                        "AttributeType": "S"
+                    },
+					{
+                        "AttributeName": "StartDateInEpoch",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.store-master"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"TaxConfigurationsTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.tax-configurations" },
+				"BillingMode" : "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.tax-configurations"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"OrdersManagementTable": {
+            "Type": "AWS::DynamoDB::Table",
+			"Condition" : "IsIndTenant",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.orders" },
+				"BillingMode" : "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.orders"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"OrdersManagementAusTable": {
+            "Type": "AWS::DynamoDB::Table",
+			"Condition" : "IsAusTenant",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.orders" },
+				"BillingMode" : "PAY_PER_REQUEST",
+				"GlobalSecondaryIndexes" : [ {
+					"IndexName" : {"Fn::Sub" : "${Environment}.${Tenant}.SecondaryOrderSearchIndex" },
+					"KeySchema": [
+						{
+							"AttributeName": "gspkey",
+							"KeyType": "HASH"
+						},
+						{
+							"AttributeName": "gsskey",
+							"KeyType": "RANGE"
+						}],
+					"Projection" : {
+						"ProjectionType" : "ALL"
+					}
+					}],
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    },
+					{
+                        "AttributeName": "gspkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "gsskey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.orders"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"OrdersManagementJAPTable": {
+            "Type": "AWS::DynamoDB::Table",
+			"Condition" : "IsJapTenant",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.orders" },
+				"BillingMode" : "PAY_PER_REQUEST",
+				"GlobalSecondaryIndexes" : [ {
+					"IndexName" : {"Fn::Sub" : "${Environment}.${Tenant}.SecondaryOrderSearchIndex" },
+					"KeySchema": [
+						{
+							"AttributeName": "gspkey",
+							"KeyType": "HASH"
+						},
+						{
+							"AttributeName": "gsskey",
+							"KeyType": "RANGE"
+						}],
+					"Projection" : {
+						"ProjectionType" : "ALL"
+					}
+					}],
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    },
+					{
+                        "AttributeName": "gspkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "gsskey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.orders"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"OrdersManagementTHATable": {
+            "Type": "AWS::DynamoDB::Table",
+			"Condition" : "IsThaTenant",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.orders" },
+				"BillingMode" : "PAY_PER_REQUEST",
+				"GlobalSecondaryIndexes" : [ {
+					"IndexName" : {"Fn::Sub" : "${Environment}.${Tenant}.SecondaryOrderSearchIndex" },
+					"KeySchema": [
+						{
+							"AttributeName": "gspkey",
+							"KeyType": "HASH"
+						},
+						{
+							"AttributeName": "gsskey",
+							"KeyType": "RANGE"
+						}],
+					"Projection" : {
+						"ProjectionType" : "ALL"
+					}
+					}],
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    },
+					{
+                        "AttributeName": "gspkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "gsskey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.orders"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"BasketsManagementTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.baskets" },
+				"BillingMode" : "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.baskets"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"PaymentConfigurationTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.payment-configuration" },
+				"BillingMode" : "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.payment-configuration"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"PaymentTransactionTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.payment-transaction" },
+				"BillingMode" : "PAY_PER_REQUEST",
+				"GlobalSecondaryIndexes" : [ {
+					"IndexName" : {"Fn::Sub" : "${Environment}.${Tenant}.TransactionIdIndex" },
+					"KeySchema": [
+						{
+							"AttributeName": "gspkey",
+							"KeyType": "HASH"
+						},
+						{
+							"AttributeName": "gsskey",
+							"KeyType": "RANGE"
+						}],
+					"Projection" : {
+						"ProjectionType" : "ALL"
+					}
+					}],
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    },
+					{
+                        "AttributeName": "gspkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "gsskey",
+                        "AttributeType": "S"
+                    }
+					
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.payment-transaction"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"PaymentRefundTable": {
+            "Type": "AWS::DynamoDB::Table",
+			"Condition" : "IsJapTenant",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.payment-refund" },
+				"BillingMode" : "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.payment-refund"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    },
+					{
+						"Key": "Tenant",
+						"Value": {
+							"Ref": "Tenant"
+						}
+					}
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"AdditionalChargesTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.additional-charges" },
+				"BillingMode" : "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.additional-charges"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"promotionsTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.promotions" },
+				"BillingMode" : "PAY_PER_REQUEST",
+				"GlobalSecondaryIndexes" : [ {
+					"IndexName" : {"Fn::Sub" : "${Environment}.${Tenant}.PromotionIndex" },
+					"KeySchema": [
+						{
+							"AttributeName": "gspkey",
+							"KeyType": "HASH"
+						},
+						{
+							"AttributeName": "gsskey",
+							"KeyType": "RANGE"
+						}],
+					"Projection" : {
+						"ProjectionType" : "ALL"
+					}
+					}],
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    },
+					 {
+                        "AttributeName": "gspkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "gsskey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.promotions"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"GiftCardOrdersTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.giftcard-orders" },
+				"BillingMode" : "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.giftcard-orders"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"RoleMatrixTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.role-matrix" },
+				"BillingMode" : "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.role-matrix"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"PosTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.pos-transaction-logs" },
+				"BillingMode" : "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.pos-transaction-logs"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"KidsPosTable": {
+            "Type": "AWS::DynamoDB::Table",
+			"Condition" : "IsJapTenant",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.kidspos-transaction-logs" },
+				"BillingMode" : "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.kidspos-transaction-logs"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"CbohPosTable": {
+            "Type": "AWS::DynamoDB::Table",
+			"Condition" : "IsJapTenant",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.cbohpos-transaction-logs" },
+				"BillingMode" : "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.cbohpos-transaction-logs"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+		"ItemInclusionTable": {
+            "Type": "AWS::DynamoDB::Table",
+			  "Properties": {
+				"TableName": {
+				  "Fn::Sub": "${Environment}.${Tenant}.item-inclusion-status"
+				},
+				"BillingMode": "PAY_PER_REQUEST",
+				"LocalSecondaryIndexes": [
+				  {
+					"IndexName": {
+					  "Fn::Sub": "${Environment}.${Tenant}.item-InclusionIndex"
+					},
+					"KeySchema": [
+					  {
+						"AttributeName": "pkey",
+						"KeyType": "HASH"
+					  },
+					  {
+						"AttributeName": "lsiskey",
+						"KeyType": "RANGE"
+					  }
+					],
+					"Projection": {
+					  "ProjectionType": "ALL"
+					}
+				  }
+				],
+				"AttributeDefinitions": [
+				  {
+					"AttributeName": "pkey",
+					"AttributeType": "S"
+				  },
+				  {
+					"AttributeName": "skey",
+					"AttributeType": "S"
+				  },
+				  {
+					"AttributeName": "lsiskey",
+					"AttributeType": "N"
+				  }
+				],
+				"KeySchema": [
+				  {
+					"AttributeName": "pkey",
+					"KeyType": "HASH"
+				  },
+				  {
+					"AttributeName": "skey",
+					"KeyType": "RANGE"
+				  }
+				],
+				"Tags": [
+				  {
+					"Key": "Environment",
+					"Value": {
+					  "Ref": "Environment"
+					}
+				  },
+				  {
+					"Key": "Name",
+					"Value": {
+					  "Fn::Sub": "${Environment}.${Tenant}.item-inclusion-status"
+					}
+				  },
+				  {
+					"Key": "AppName",
+					"Value": {
+					  "Ref": "AppName"
+					}
+				  }
+				],
+				"TimeToLiveSpecification": {
+				  "AttributeName": "ttl",
+				  "Enabled": "TRUE"
+				}
+			}
+		},
+		"MasterDataMigrationFailureTable": {
+            "Type": "AWS::DynamoDB::Table",
+			  "Properties": {
+				"TableName": {
+				  "Fn::Sub": "${Environment}.${Tenant}.master-data-migration-failure"
+				},
+				"TimeToLiveSpecification": {
+				  "AttributeName": "ttl",
+				  "Enabled": "TRUE"
+				},
+				"BillingMode": "PAY_PER_REQUEST",
+				"LocalSecondaryIndexes": [
+				  {
+					"IndexName": {
+					  "Fn::Sub": "${Environment}.${Tenant}.master-data-migration-failure"
+					},
+					"KeySchema": [
+					  {
+						"AttributeName": "jobname",
+						"KeyType": "HASH"
+					  },
+					  {
+						"AttributeName": "store",
+						"KeyType": "RANGE"
+					  }
+					],
+					"Projection": {
+					  "ProjectionType": "ALL"
+					}
+				  }
+				],
+				"AttributeDefinitions": [
+				  {
+					"AttributeName": "jobname",
+					"AttributeType": "S"
+				  },
+				  {
+					"AttributeName": "requestid",
+					"AttributeType": "S"
+				  },
+				  {
+					"AttributeName": "store",
+					"AttributeType": "S"
+				  }
+				],
+				"KeySchema": [
+				  {
+					"AttributeName": "jobname",
+					"KeyType": "HASH"
+				  },
+				  {
+					"AttributeName": "requestid",
+					"KeyType": "RANGE"
+				  }
+				],
+				"Tags": [
+				  {
+					"Key": "Environment",
+					"Value": {
+					  "Ref": "Environment"
+					}
+				  },
+				  {
+					"Key": "Name",
+					"Value": {
+					  "Fn::Sub": "${Environment}.${Tenant}.master-data-migration-failure"
+					}
+				  },
+				  {
+					"Key": "AppName",
+					"Value": {
+					  "Ref": "AppName"
+					}
+				  }
+				]
+			}
+		},
+		"AggregatorOffersTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.aggregator-offers" },
+				"BillingMode" : "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.aggregator-offers"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        },
+         "BlacklistPhonenumber": {
+            "Type": "AWS::DynamoDB::Table",
+			"Condition" : "IsAusTenant",
+            "Properties": {
+				"TableName" : {"Fn::Sub" : "${Environment}.${Tenant}.blacklist-phonenumber" },
+				"BillingMode" : "PAY_PER_REQUEST",
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "pkey",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "pkey",
+                        "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "skey",
+                        "KeyType": "RANGE"
+                    }
+                ],
+				 "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}.${Tenant}.blacklist-phonenumber"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+				"TimeToLiveSpecification": {
+				    "AttributeName": "ttl",
+				    "Enabled": "TRUE"
+				}
+            }
+        }			
+	}
+}

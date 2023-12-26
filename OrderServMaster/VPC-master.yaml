@@ -1,0 +1,387 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS CloudFormation Template for ReplicaDB VPC
+Parameters:
+  Environment:
+    Description: An environment name that is prefixed to resource names
+    Type: String
+  VpcCIDR:
+    Description: Please enter the IP range (CIDR notation) for this ReplicaDB VPC
+    Type: String
+    Default: 10.0.0.0/16
+  PublicSubnet1CIDR:
+    Description:
+      Please enter the IP range (CIDR notation) for the public subnet in the
+      first Availability Zone
+    Type: String
+    Default: 10.0.1.0/24
+  PublicSubnet2CIDR:
+    Description: 
+      Please enter the IP range (CIDR notation) for the public subnet in the
+      second Availability Zone
+    Type: String
+    Default: 10.0.2.0/24
+  
+  PrivateDBSubnet1CIDR:
+    Description: 
+      Please enter the IP range (CIDR notation) for the private subnet in the
+      first Availability Zone
+    Type: String
+    Default: 10.0.5.0/24
+  PrivateDBSubnet2CIDR:
+    Description: 
+      Please enter the IP range (CIDR notation) for the private subnet in the
+      second Availability Zone
+    Type: String
+    Default: 10.0.6.0/24
+  AppName:
+    Description: Application Name
+    Type: String
+    Default: orderserv
+Resources:
+  ReplicaDBVPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Name
+          Value: !Sub 'orderserv-${Environment}-ReplicaDBVPC'
+        - Key: AppName
+          Value: !Ref AppName
+        - Key: Tenant
+          Value: all
+  ReplicaDBInternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Name
+          Value: !Sub 'orderserv-${Environment}-ReplicaDBIGW'
+        - Key: AppName
+          Value: !Ref AppName
+        - Key: Tenant
+          Value: all
+  ReplicaDBInternetGatewayAttachment:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      InternetGatewayId: !Ref ReplicaDBInternetGateway
+      VpcId: !Ref ReplicaDBVPC
+  ReplicaDBPublicSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref ReplicaDBVPC
+      AvailabilityZone: !Select 
+        - 0
+        - !GetAZs ''
+      CidrBlock: !Ref PublicSubnet1CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Name
+          Value: !Sub 'orderserv-${Environment}-ReplicaDBPublicSubnet1(AZ1)'
+        - Key: AppName
+          Value: !Ref AppName
+        - Key: Tenant
+          Value: all
+  ReplicaDBPublicSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref ReplicaDBVPC
+      AvailabilityZone: !Select 
+        - 1
+        - !GetAZs ''
+      CidrBlock: !Ref PublicSubnet2CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Name
+          Value: !Sub 'orderserv-${Environment}-ReplicaDBPublicSubnet2(AZ2)'
+        - Key: AppName
+          Value: !Ref AppName
+        - Key: Tenant
+          Value: all
+  ReplicaDBPrivateDBSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref ReplicaDBVPC
+      AvailabilityZone: !Select 
+        - 0
+        - !GetAZs ''
+      CidrBlock: !Ref PrivateDBSubnet1CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Name
+          Value: !Sub 'orderserv-${Environment}-ReplicaDBPrivateDBSubnet1(AZ1)'
+        - Key: AppName
+          Value: !Ref AppName
+        - Key: Tenant
+          Value: all
+  ReplicaDBPrivateDBSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref ReplicaDBVPC
+      AvailabilityZone: !Select 
+        - 1
+        - !GetAZs ''
+      CidrBlock: !Ref PrivateDBSubnet2CIDR
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Name
+          Value: !Sub 'orderserv-${Environment}-ReplicaDBPrivateDBSubnet2(AZ2)'
+        - Key: AppName
+          Value: !Ref AppName
+        - Key: Tenant
+          Value: all
+  ReplicaDBNatGateway1EIP:
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Name
+          Value: !Sub 'orderserv-${Environment}-ReplicaDB-EIP1'
+        - Key: AppName
+          Value: !Ref AppName
+        - Key: Tenant
+          Value: all
+  ReplicaDBNatGateway2EIP:
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Name
+          Value: !Sub 'orderserv-${Environment}-ReplicaDB-EIP2'
+        - Key: AppName
+          Value: !Ref AppName
+        - Key: Tenant
+          Value: all
+  ReplicaDBNatGateway1:
+    Type: 'AWS::EC2::NatGateway'
+    DependsOn: ReplicaDBNatGateway1EIP
+    Properties:
+      AllocationId: !GetAtt 
+        - ReplicaDBNatGateway1EIP
+        - AllocationId
+      SubnetId: !Ref ReplicaDBPublicSubnet1
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Name
+          Value: !Sub 'orderserv-${Environment}-ReplicaDBNGW1'
+        - Key: AppName
+          Value: !Ref AppName
+        - Key: Tenant
+          Value: all
+  ReplicaDBNatGateway2:
+    Type: 'AWS::EC2::NatGateway'
+    DependsOn: ReplicaDBNatGateway2EIP
+    Properties:
+      AllocationId: !GetAtt 
+        - ReplicaDBNatGateway2EIP
+        - AllocationId
+      SubnetId: !Ref ReplicaDBPublicSubnet2
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Name
+          Value: !Sub 'orderserv-${Environment}-ReplicaDBNGW2'
+        - Key: AppName
+          Value: !Ref AppName
+        - Key: Tenant
+          Value: all
+  ReplicaDBPublicRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    DependsOn: ReplicaDBVPC
+    Properties:
+      VpcId: !Ref ReplicaDBVPC
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Name
+          Value: !Sub 'orderserv-${Environment}-ReplicaDBPublicRoutes'
+        - Key: AppName
+          Value: !Ref AppName
+        - Key: Tenant
+          Value: all
+  ReplicaDBDefaultPublicRoute:
+    Type: 'AWS::EC2::Route'
+    DependsOn: ReplicaDBInternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref ReplicaDBPublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref ReplicaDBInternetGateway
+  ReplicaDBPublicSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    DependsOn: ReplicaDBPublicRouteTable
+    Properties:
+      RouteTableId: !Ref ReplicaDBPublicRouteTable
+      SubnetId: !Ref ReplicaDBPublicSubnet1
+  ReplicaDBPublicSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    DependsOn: ReplicaDBPublicRouteTable
+    Properties:
+      RouteTableId: !Ref ReplicaDBPublicRouteTable
+      SubnetId: !Ref ReplicaDBPublicSubnet2
+  ReplicaDBPrivateDBRouteTable1:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref ReplicaDBVPC
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Name
+          Value: !Sub 'orderserv-${Environment}-ReplicaDBPrivateDBRoutes(AZ1)'
+        - Key: AppName
+          Value: !Ref AppName
+        - Key: Tenant
+          Value: all
+  ReplicaDBDefaultDBPrivateRoute1:
+    Type: 'AWS::EC2::Route'
+    DependsOn: ReplicaDBNatGateway1
+    Properties:
+      RouteTableId: !Ref ReplicaDBPrivateDBRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref ReplicaDBNatGateway1
+  ReplicaDBPrivateDBSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    DependsOn: ReplicaDBPrivateDBRouteTable1
+    Properties:
+      RouteTableId: !Ref ReplicaDBPrivateDBRouteTable1
+      SubnetId: !Ref ReplicaDBPrivateDBSubnet1
+  ReplicaDBPrivateDBRouteTable2:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref ReplicaDBVPC
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Name
+          Value: !Sub 'orderserv-${Environment}-ReplicaDBPrivateDBRoutes(AZ2)'
+        - Key: AppName
+          Value: !Ref AppName
+        - Key: Tenant
+          Value: all
+  ReplicaDBDefaultDBPrivateRoute2:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref ReplicaDBPrivateDBRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref ReplicaDBNatGateway2
+  ReplicaDBPrivateDBSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    DependsOn: ReplicaDBPrivateDBRouteTable2
+    Properties:
+      RouteTableId: !Ref ReplicaDBPrivateDBRouteTable2
+      SubnetId: !Ref ReplicaDBPrivateDBSubnet2
+  ReplicaDBVPNGateway: 
+    Type: 'AWS::EC2::VPNGateway'
+    Properties: 
+       Type: ipsec.1
+       Tags:
+         - Key: Environment
+           Value: !Ref Environment
+         - Key: Name
+           Value: !Sub 'orderserv-${Environment}-ReplicaDBVPNGateway'
+         - Key: AppName
+           Value: !Ref AppName
+         - Key: Tenant
+           Value: all
+  ReplicaDBSubnetGroup:
+     Type: 'AWS::RDS::DBSubnetGroup'
+     Properties:
+         DBSubnetGroupName: !Sub 'orderserv-${Environment}-ReplicaDBsubnetgroup'
+         DBSubnetGroupDescription: Subnet group for ReplicaDB for market
+         SubnetIds:
+         - !Ref ReplicaDBPrivateDBSubnet1
+         - !Ref ReplicaDBPrivateDBSubnet2
+         Tags:
+            - Key: Environment
+              Value: !Ref Environment
+            - Key: Name
+              Value: !Sub 'orderserv-${Environment}-ReplicaDBsubnetgroup'
+            - Key: Tenant
+              Value: All
+            - Key: AppName
+              Value: !Ref AppName
+  ReplicaDBVPGAttachment:  
+    Type: AWS::EC2::VPCGatewayAttachment
+    DependsOn: ReplicaDBVPNGateway
+    Properties: 
+        VpcId: !Ref ReplicaDBVPC
+        VpnGatewayId: !Ref ReplicaDBVPNGateway
+  # Here start the tenant specifig configuration
+  # Please add the generic on top of it
+  # For multi tenant please replicate the below seciont in seperate file
+  ReplicaDBDatabaseSecurityGroup:
+   Type: 'AWS::EC2::SecurityGroup'
+   Properties:
+    GroupName:
+      'Fn::Sub': 'orderserv-${Environment}-Canada-ReplicaDB-sg'
+    GroupDescription:
+      'Fn::Sub': 'orderserv-${Environment}-Canada-ReplicaDB-sg'
+    VpcId:
+      Ref: ReplicaDBVPC
+    Tags:
+      - Key: Name
+        Value:
+          'Fn::Sub': 'orderserv-${Environment}-Canada-ReplicaDB-sg'
+      - Key: AppName
+        Value:
+          Ref: AppName
+      - Key: Environment
+        Value:
+          Ref: Environment
+      - Key: Tenant
+        Value: Canada
+    SecurityGroupEgress:
+      - IpProtocol: tcp
+        FromPort: 3306
+        ToPort: 3306
+        CidrIp: 0.0.0.0/0
+  ReplicaDBParameterGroup:
+    Type: 'AWS::RDS::DBParameterGroup'
+    Properties:
+        DBParameterGroupName: !Sub 'orderserv-${Environment}-Canada-ReplicaDBParamGroup'
+        Description: !Sub '${Environment}-Canada-ReplicaDBParamGroup'
+        Family: mysql8.0
+        Tags:
+          - Key: Environment
+            Value: !Ref Environment
+          - Key: Name
+            Value: !Sub '${Environment}-Canada-ReplicaDBDBParamGroup'
+          - Key: Tenant
+            Value: Canada
+          - Key: AppName
+            Value: !Ref AppName
+  ReplicaDBOptionGroup:
+    Type: 'AWS::RDS::OptionGroup'
+    Properties:
+        OptionGroupName: !Sub '${Environment}-Canada-ReplicaDBOptionGroup'
+        EngineName: mysql
+        MajorEngineVersion: '8.0'
+        OptionGroupDescription: !Sub '${Environment}-Canada-ReplicaDBOptionGroup'
+        Tags:
+          - Key: Environment
+            Value: !Ref Environment
+          - Key: Name
+            Value: !Sub '${Environment}-Canada-ReplicaDBOptionGroup'
+          - Key: Tenant
+            Value: Canada
+          - Key: AppName
+            Value: !Ref AppName
+
+
+ 

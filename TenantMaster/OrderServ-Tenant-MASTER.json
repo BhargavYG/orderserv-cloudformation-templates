@@ -1,0 +1,807 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "AWS CloudFormation Template for Orde",
+	"Parameters": {
+		"VpcId":{
+            "Type":"AWS::EC2::VPC::Id",
+            "Description":"Select the VPC"
+        },
+		"PrivateAppSubnet01" :{
+			"Type": "String",
+			"Description": "Private App Subent01"
+		 },
+		"PrivateAppSubnet02" :{
+			"Type": "String",
+			"Description": "Private App Subent02"
+		},
+		"ALBSecurityGroup" :{
+			"Type": "String",
+			"Description": "ALB Security Group ID"
+		},
+		"VPCEApiGwSecurityGroup":{
+			"Type": "String",
+			"Description": "ALB Security Group ID"
+		},
+		"Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"Tenant": {
+			"Type": "String",
+			"Description": "Enter the tenant/country key",
+			"Default": "os-kfc-in",
+			"MaxLength": 9,
+			"MinLength": 9
+		},
+		"TenantId": {
+			"Type": "String",
+			"Description": "Enter the tenant Id used for request routing",
+			"Default": "15895bb59f7b4bb588ee933f8cd5344a"
+		},
+		"AppName": {
+			"Type": "String",
+			"Default": "order-serv",
+			"Description": "Application Name"
+		},
+		"KMSMasterKeyID": {
+            "Type": "String",
+            "Default": "mrk-f725693a8543480598e836751441aea3",
+            "Description": "Enter Tenant Specific KMSMasterKeyID"
+		},
+		"NestStackBucketName": {
+			"Type": "String",
+			"Default": "orderserv-cloudformation-stack-bucket",
+			"Description": "Name of the S3 bucket where Nest CFTs and Lambda zip files are placed"
+		},
+		"NestStackBucketNameENVPrefix": {
+			"Type": "String",
+			"Default": "DEV",
+			"Description": "Enter the Name of ENV as PROD",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"TenantRolePolicyStackName" :{
+			"Type": "String",
+			"Default": "TenantRolePolicyStack",
+			"Description": "Stack Name for the TenantRolePolicy"			
+		},
+		"secretID" :{
+			"Type": "String",
+			"Default": "development/gitlabtoken-qjgcc0",
+            "Description": "Enter the Gitlab Secret ID"		
+		},
+		"ECRAcntID" :{
+			"Type": "String",
+			"Default": "971757624067",
+            "Description": "Enter the ECR account ID"		
+		},
+		"BasketALBListenerARN" :{
+			"Type": "String",
+            "Description": "Enter the ALB Listener ARN for the domain based ALB"		
+		},
+		"OrderALBListenerARN" :{
+			"Type": "String",
+            "Description": "Enter the ALB Listener ARN for the domain based ALB"		
+		},
+		"PaymentALBListenerARN" :{
+			"Type": "String",
+            "Description": "Enter the ALB Listener ARN for the domain based ALB"		
+		},
+		"CustomerALBListenerARN" :{
+			"Type": "String",
+            "Description": "Enter the ALB Listener ARN for the domain based ALB"		
+		},
+		"StoreALBListenerARN" :{
+			"Type": "String",
+            "Description": "Enter the ALB Listener ARN for the domain based ALB"		
+		},
+		"MenuPromotionALBListenerARN" :{
+			"Type": "String",
+            "Description": "Enter the ALB Listener ARN for the domain based ALB"		
+		}
+		
+	},
+	"Conditions": {
+        "IsIndTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-in"
+            ]
+        }
+	},
+	"Resources": {
+		"ORDERSERVECSSG": {
+			"Type": "AWS::CloudFormation::Stack",
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/ECS-SG.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters": {
+					"VpcId":  { "Ref" : "VpcId" },
+					"ALBSGID": { 
+						"Ref" : "ALBSecurityGroup"						
+					},
+					"VPCEApiGwSecurityGroup":{
+						"Ref" :"VPCEApiGwSecurityGroup"
+					},
+					"Environment": {
+						"Ref": "Environment"
+					},
+					"Tenant": {
+						"Ref": "Tenant"
+					},
+					"AppName": {
+						"Ref": "AppName"
+					}
+				}
+			}
+		},
+		"ORDERSERVSNS": {
+			"Type": "AWS::CloudFormation::Stack",
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/sns_topic.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters" : {
+                "Environment" : { "Ref": "Environment" },
+				"AppName" : { "Ref": "AppName" },
+				"Tenant" : { "Ref": "Tenant" }
+               }
+            }
+        },
+		
+		"ORDERSERVS3": {
+			"Type": "AWS::CloudFormation::Stack",
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/S3-OrderServ.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters" : {
+                "Environment" : { "Ref": "Environment" },
+				"AppName" : { "Ref": "AppName" },
+				"Tenant" : { "Ref": "Tenant" },
+				"KMSMasterKeyID" : { "Ref": "KMSMasterKeyID" }
+               }
+            }
+        },
+		"ORDERSERVTASKDEF": {
+			"Type": "AWS::CloudFormation::Stack",
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/Master-TaskDefinitions.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters": {
+					"Environment": {
+						"Ref": "Environment"
+					},
+					"Tenant": {
+						"Ref": "Tenant"
+					},
+					"AppName": {
+						"Ref": "AppName"
+					},
+					"NestStackBucketName" :{
+						"Ref" : "NestStackBucketName"
+					 },
+					 "NestStackBucketNameENVPrefix" :{
+						"Ref" : "NestStackBucketNameENVPrefix"
+					 },
+					 "TenantRolePolicyStackName" :{
+						"Ref" : "TenantRolePolicyStackName"
+					},
+					"secretID" :{
+						"Ref" : "secretID"
+					},
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+				}
+			}
+		},
+		"ORDERSERVSERVICETARGETGROUPS": {
+			"Type": "AWS::CloudFormation::Stack",
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/Master-Service-TargetGroups.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters": {
+					"Environment": {
+						"Ref": "Environment"
+					},
+					"Tenant": {
+						"Ref": "Tenant"
+					},
+					"VpcId": {"Ref": "VpcId"},
+					"NestStackBucketName" :{
+						"Ref" : "NestStackBucketName"
+					 },
+					 "NestStackBucketNameENVPrefix" :{
+						"Ref" : "NestStackBucketNameENVPrefix"
+					 },
+					"AppName": {
+						"Ref": "AppName"
+					}
+				}
+			}
+		},
+		"BASKETALBRULES": {
+			"Type": "AWS::CloudFormation::Stack",
+			"DependsOn": ["ORDERSERVSERVICETARGETGROUPS"],
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/Master-Basket-ALB-Listener-Rules.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters": {
+					"ListenerArn": {
+						 "Ref" : "BasketALBListenerARN"
+					},
+					"ServiceTargetGroupStackName": {
+						"Fn::GetAtt": [
+							"ORDERSERVSERVICETARGETGROUPS",
+							"Outputs.ServiceTargetGroupStackName"
+						]
+					},
+					"Tenant": {
+						"Ref": "Tenant"
+					},
+					"TenantId": {
+						"Ref": "TenantId"
+					},
+					"NestStackBucketName" :{
+						"Ref" : "NestStackBucketName"
+					 },
+					 "NestStackBucketNameENVPrefix" :{
+						"Ref" : "NestStackBucketNameENVPrefix"
+					 }
+				}
+			}
+		},
+		"ORDERALBRULES": {
+			"Type": "AWS::CloudFormation::Stack",
+			"DependsOn": ["ORDERSERVSERVICETARGETGROUPS"],
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/Master-Order-ALB-Listener-Rules.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters": {
+					"ListenerArn": {
+						"Ref" : "OrderALBListenerARN"
+					},
+					"ServiceTargetGroupStackName": {
+						"Fn::GetAtt": [
+							"ORDERSERVSERVICETARGETGROUPS",
+							"Outputs.ServiceTargetGroupStackName"
+						]
+					},
+					"Tenant": {
+						"Ref": "Tenant"
+					},
+					"TenantId": {
+						"Ref": "TenantId"
+					},
+					"NestStackBucketName" :{
+						"Ref" : "NestStackBucketName"
+					 },
+					 "NestStackBucketNameENVPrefix" :{
+						"Ref" : "NestStackBucketNameENVPrefix"
+					 }
+				}
+			}
+		},
+		"CUSTOMERALBRULES": {
+			"Type": "AWS::CloudFormation::Stack",
+			"DependsOn": ["ORDERSERVSERVICETARGETGROUPS"],
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/Master-Customer-ALB-Listener-Rules.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters": {
+					"ListenerArn": {
+						 "Ref" : "CustomerALBListenerARN"
+					},
+					"ServiceTargetGroupStackName": {
+						"Fn::GetAtt": [
+							"ORDERSERVSERVICETARGETGROUPS",
+							"Outputs.ServiceTargetGroupStackName"
+						]
+					},
+					"Tenant": {
+						"Ref": "Tenant"
+					},
+					"TenantId": {
+						"Ref": "TenantId"
+					},
+					"NestStackBucketName" :{
+						"Ref" : "NestStackBucketName"
+					 },
+					 "NestStackBucketNameENVPrefix" :{
+						"Ref" : "NestStackBucketNameENVPrefix"
+					 }
+				}
+			}
+		},
+		"PAYMENTALBRULES": {
+			"Type": "AWS::CloudFormation::Stack",
+			"DependsOn": ["ORDERSERVSERVICETARGETGROUPS"],
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/Master-Payment-ALB-Listener-Rules.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters": {
+					"ListenerArn": {
+						 "Ref" : "PaymentALBListenerARN"
+					},
+					"ServiceTargetGroupStackName": {
+						"Fn::GetAtt": [
+							"ORDERSERVSERVICETARGETGROUPS",
+							"Outputs.ServiceTargetGroupStackName"
+						]
+					},
+					"Tenant": {
+						"Ref": "Tenant"
+					},
+					"TenantId": {
+						"Ref": "TenantId"
+					},
+					"NestStackBucketName" :{
+						"Ref" : "NestStackBucketName"
+					 },
+					 "NestStackBucketNameENVPrefix" :{
+						"Ref" : "NestStackBucketNameENVPrefix"
+					 }
+				}
+			}
+		},
+		"STOREALBRULES": {
+			"Type": "AWS::CloudFormation::Stack",
+			"DependsOn": ["ORDERSERVSERVICETARGETGROUPS"],
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/Master-Store-ALB-Listener-Rules.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters": {
+					"ListenerArn": {
+						 "Ref" : "StoreALBListenerARN"
+					},
+					"ServiceTargetGroupStackName": {
+						"Fn::GetAtt": [
+							"ORDERSERVSERVICETARGETGROUPS",
+							"Outputs.ServiceTargetGroupStackName"
+						]
+					},
+					"Tenant": {
+						"Ref": "Tenant"
+					},
+					"TenantId": {
+						"Ref": "TenantId"
+					},
+					"NestStackBucketName" :{
+						"Ref" : "NestStackBucketName"
+					 },
+					 "NestStackBucketNameENVPrefix" :{
+						"Ref" : "NestStackBucketNameENVPrefix"
+					 }
+				}
+			}
+		},
+		"MENUPROMOTIONALBRULES": {
+			"Type": "AWS::CloudFormation::Stack",
+			"DependsOn": ["ORDERSERVSERVICETARGETGROUPS"],
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/Master-MenuPromotion-ALB-Listener-Rules.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters": {
+					"ListenerArn": {
+						 "Ref" : "MenuPromotionALBListenerARN"
+					},
+					"ServiceTargetGroupStackName": {
+						"Fn::GetAtt": [
+							"ORDERSERVSERVICETARGETGROUPS",
+							"Outputs.ServiceTargetGroupStackName"
+						]
+					},
+					"Tenant": {
+						"Ref": "Tenant"
+					},
+					"TenantId": {
+						"Ref": "TenantId"
+					},
+					"NestStackBucketName" :{
+						"Ref" : "NestStackBucketName"
+					 },
+					 "NestStackBucketNameENVPrefix" :{
+						"Ref" : "NestStackBucketNameENVPrefix"
+					 }
+				}
+			}
+		},
+		"OLOUIALBRULES": {
+			"Type": "AWS::CloudFormation::Stack",
+			"DependsOn": ["ORDERSERVSERVICETARGETGROUPS","ORDERSERVALB"],
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/Master-UI-ALB-Listener-Rules.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters": {
+					"UIListenerArn": {
+						 "Fn::GetAtt": [
+								"ORDERSERVALB",
+								"Outputs.UIalbListenerOutput"
+							]
+					},
+					"ServiceTargetGroupStackName": {
+						"Fn::GetAtt": [
+							"ORDERSERVSERVICETARGETGROUPS",
+							"Outputs.ServiceTargetGroupStackName"
+						]
+					},
+					"Tenant": {
+						"Ref": "Tenant"
+					},
+					"TenantId": {
+						"Ref": "TenantId"
+					},
+					"NestStackBucketName" :{
+						"Ref" : "NestStackBucketName"
+					 },
+					 "NestStackBucketNameENVPrefix" :{
+						"Ref" : "NestStackBucketNameENVPrefix"
+					 }
+				}
+			}
+		},
+		"CALLCENTERALBRULES": {
+			"Type": "AWS::CloudFormation::Stack",
+			"Condition" : "IsIndTenant",
+			"DependsOn": ["ORDERSERVSERVICETARGETGROUPS","ORDERSERVALB"],
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/Master-CC-ALB-Listener-Rules.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters": {
+					"CCListenerArn": {
+						 "Fn::GetAtt": [
+								"ORDERSERVALB",
+								"Outputs.CallCenteralbListenerOutput"
+							]
+					},
+					"ServiceTargetGroupStackName": {
+						"Fn::GetAtt": [
+							"ORDERSERVSERVICETARGETGROUPS",
+							"Outputs.ServiceTargetGroupStackName"
+						]
+					},
+					"Tenant": {
+						"Ref": "Tenant"
+					},
+					"NestStackBucketName" :{
+						"Ref" : "NestStackBucketName"
+					 },
+					 "NestStackBucketNameENVPrefix" :{
+						"Ref" : "NestStackBucketNameENVPrefix"
+					 }
+				}
+			}
+		},
+		"ORDERSERVECSSERVICES": {
+			"Type": "AWS::CloudFormation::Stack",
+			"DependsOn": [
+				"ORDERSERVSERVICETARGETGROUPS",
+				"ORDERSERVTASKDEF",
+				"ORDERSERVECSSG",
+				"BASKETALBRULES",
+				"OLOUIALBRULES",
+				"ORDERALBRULES",
+				"CUSTOMERALBRULES",
+				"PAYMENTALBRULES",
+				"MENUPROMOTIONALBRULES",
+				"STOREALBRULES"
+			],
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/Master-ECS-Services.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters": {
+					"TGStackName": {
+						"Fn::GetAtt": [
+							"ORDERSERVSERVICETARGETGROUPS",
+							"Outputs.ServiceTargetGroupStackName"
+						]
+					},
+					"TDStackname": {
+						"Fn::GetAtt": [
+							"ORDERSERVTASKDEF",
+							"Outputs.TaskDefStackName"
+						]
+					},
+					"PrivateSubnet01": {
+						"Ref" : "PrivateAppSubnet01"
+					},
+					"PrivateSubnet02": {
+						"Ref" : "PrivateAppSubnet02"
+					},
+					"ECSSecurityGroup": {
+						"Fn::GetAtt": [
+							"ORDERSERVECSSG",
+							"Outputs.ECSSecurityGroup"
+						]
+					},
+					"ECSUISecurityGroup": {
+						"Fn::GetAtt": [
+							"ORDERSERVECSSG",
+							"Outputs.ecsUISecurityGroup"
+						]
+					},
+					"ECSCCSecurityGroup": {
+						"Fn::If" : [
+							"IsIndTenant",
+							{"Fn::GetAtt": [
+								"ORDERSERVECSSG",
+								"Outputs.ecsCCSecurityGroup"
+							]},
+							{"Ref" : "AWS::NoValue"}
+						  ]
+						
+					},
+					"Environment": {
+						"Ref": "Environment"
+					},
+					"Tenant": {
+						"Ref": "Tenant"
+					},
+					"AppName": {
+						"Ref": "AppName"
+					},
+					"NestStackBucketName" :{
+						"Ref" : "NestStackBucketName"
+					 },
+					 "NestStackBucketNameENVPrefix" :{
+						"Ref" : "NestStackBucketNameENVPrefix"
+					 },
+					 "TenantRolePolicyStackName" :{
+						"Ref" : "TenantRolePolicyStackName"
+					},
+					"VpcId": {
+						"Ref": "VpcId"
+					},
+					"secretID" :{
+						"Ref" : "secretID"
+					},
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+				}
+			}
+		},
+		"ORDERSERVDYNAMODB": {
+			"Type": "AWS::CloudFormation::Stack",
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/DynamoDB.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters": {
+					"Environment": {
+						"Ref": "Environment"
+					},
+					"Tenant": {
+						"Ref": "Tenant"
+					},
+					"AppName": {
+						"Ref": "AppName"
+					},
+					"TenantRolePolicyStackName" :{
+						"Ref": "TenantRolePolicyStackName"
+					}
+				}
+			}
+		},
+		"ORDERSERVALB": {
+			"Type": "AWS::CloudFormation::Stack",
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/ALB-with-TG.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters": {
+					"ALBSecGroup": {
+						"Ref" : "ALBSecurityGroup"
+					},
+					"PrivateSubnet01": {
+						"Ref" : "PrivateAppSubnet01"
+					},
+					"PrivateSubnet02": {
+						"Ref" : "PrivateAppSubnet02"
+					},
+					"VPC01": { "Ref" : "VpcId"},
+					"Environment": {
+						"Ref": "Environment"
+					},
+					"AppName": {
+						"Ref": "AppName"
+					},
+					"Tenant": {
+						"Ref": "Tenant"
+					}
+				}
+			}
+		},
+		"ORDERSERVOLOAPIGW": {
+			"Type": "AWS::CloudFormation::Stack",
+			"DependsOn" : ["ORDERSERVECSSG","ORDERSERVALB"],
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/OLOUIApiGateway.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters": {
+					"Environment": {
+						"Ref": "Environment"
+					},
+					"Tenant": {
+						"Ref": "Tenant"
+					},
+					"AppName": {
+						"Ref": "AppName"
+					},
+					"ALBListenerARN" :{
+						"Fn::GetAtt": [
+							"ORDERSERVALB",
+							"Outputs.UIalbListenerOutput"
+						]
+					},
+					"PrivateSubnet01": {
+						"Ref" : "PrivateAppSubnet01"
+					},
+					"PrivateSubnet02": {
+						"Ref" : "PrivateAppSubnet02"
+					},
+					"ECSUISecurityGroup": {
+						"Fn::GetAtt": [
+							"ORDERSERVECSSG",
+							"Outputs.ecsUISecurityGroup"
+						]
+					}
+				}
+			}
+		},
+		"ORDERSERVCALLCENTERGW": {
+			"Type": "AWS::CloudFormation::Stack",
+			"Condition" : "IsIndTenant",
+			"DependsOn" : ["ORDERSERVECSSG","ORDERSERVALB"],
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/CallCenterApiGateway.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters": {
+					"Environment": {
+						"Ref": "Environment"
+					},
+					"Tenant": {
+						"Ref": "Tenant"
+					},
+					"AppName": {
+						"Ref": "AppName"
+					},
+					"ALBListenerARN" :{
+						"Fn::GetAtt": [
+							"ORDERSERVALB",
+							"Outputs.CallCenteralbListenerOutput"
+						]
+					},
+					"PrivateSubnet01": {
+						"Ref" : "PrivateAppSubnet01"
+					},
+					"PrivateSubnet02": {
+						"Ref" : "PrivateAppSubnet02"
+					},
+					"ECSCCSecurityGroup": {
+						"Fn::GetAtt": [
+							"ORDERSERVECSSG",
+							"Outputs.ecsCCSecurityGroup"
+						]
+					}
+				}
+			}
+		},
+		"ORDERSERVPARAMSTORE": {
+			"Type": "AWS::CloudFormation::Stack",
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/parameterstore.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters": {
+					"Environment": {
+						"Ref": "Environment"
+					},
+					"Tenant": {
+						"Ref": "Tenant"
+					},
+					"AppName": {
+						"Ref": "AppName"
+					},
+					"TenantRolePolicyStackName" :{
+						"Ref": "TenantRolePolicyStackName"
+					}
+				}
+			}
+		}
+		
+	},
+	"Metadata": {
+		"AWS::CloudFormation::Interface": {
+			"ParameterGroups": [
+				{
+					"Label": {
+						"default": "Country Specific installation"
+					},
+					"Parameters": [
+						"Tenant","TenantId"
+					]
+				},
+				{
+					"Label": {
+						"default": "S3 Bucket for Nested CFTs"
+					},
+					"Parameters": [
+						"NestStackBucketName"
+					]
+				},
+				{
+					"Label": {
+						"default": "Master Stack VPC, Subnet"
+					},
+					"Parameters": [
+						"VpcId","PrivateAppSubnet01","PrivateAppSubnet02"
+					]
+				},
+				{
+					"Label": {
+						"default": "Environment and Tagging"
+					},
+					"Parameters": [
+						"Environment",
+						"NestStackBucketNameENVPrefix"
+					]
+				}
+			],
+			"ParameterLabels": {
+				"Environment": {
+					"default": "Environment Name for Resource Names and Tagging"
+				},
+				"NestStackBucketNameENVPrefix": {
+					"default": "Environment Name bucket"
+				},
+				"NestStackBucketName": {
+					"default": "S3 Bucket which contains all Nest CFTs. and zip files for 3 Lambda functions. The CFTs must be in a folder named NestCFTs . Parameter CFTs are in a further Nested folder called parameters"
+				},
+				"TenantRolePolicyStackName" :{
+					"default": "Tenant Specfic RolePolicy Stack Name"
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,326 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "AWS CloudFormation for creating an Amazon MySQL RDS DB instance",
+
+    "Parameters": {
+        "Tenant": {
+            "Type": "String",
+            "Description": "Enter the tenant/country key",
+            "Default": "os-kfc-au",
+            "MaxLength": 9,
+            "MinLength": 9
+        },
+        "Environment" : {
+            "Type" : "String",
+            "Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+            "AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+            "Default" : "dev",
+            "MaxLength": 4,
+            "MinLength": 2
+        },
+        "AppName": {
+            "Type": "String",
+            "Default": "order-serv",
+            "Description": "Application Name"
+        },
+        "port": {
+            "Type": "String",
+            "Default": "3306",
+            "Description": "port number"
+        },
+        "VPCSecurityGroupIds": {
+            "Type": "String",
+            "Description": "Comma delimited VPC SecurityGroupIds",
+	        "Default" : "sg-030c19c6a6c98e68e"
+        },
+        "VPCSubnet1": {
+             "Type": "String",
+             "Description": "Enter 1st vpc subnet ID"
+        },
+		"VPCSubnet2": {
+             "Type": "String",
+             "Description": "Enter 2nd vpc subnet ID"
+        },
+        "MultiAZ": {
+             "Type": "String",
+             "Description": "Need to enable MultiAZ ",
+	         "Default" : "false",
+             "AllowedValues" : ["true","false"]
+        },
+        "DBInstanceClass": {
+            "Default": "db.t3.small",
+            "AllowedValues" : ["db.t3.small","db.t3.micro","db.t3.medium","db.t3.large","db.t3.xlarge","db.t3.2xlarge","db.t2.small","db.t2.micro","db.t2.medium","db.t2.large","db.t2.xlarge","db.t2.2xlarge"],
+            "Description": "DB instance class",
+            "Type": "String",
+            "ConstraintDescription": "Must select a valid DB instance type."
+        },
+        "DBAllocatedStorage": {
+            "Default": "20",
+            "Description": "The size of the database (GiB)",
+            "Type": "Number",
+            "MinValue": "20",
+            "MaxValue": "1024",
+
+            "ConstraintDescription": "must be between 20 and 65536 GiB."
+        },
+        "DBUsername": {
+            "NoEcho": "true",
+            "Description": "Username for MySQL database access",
+            "Type": "String",
+            "MinLength": "1",
+            "MaxLength": "16",
+            "AllowedPattern": "[a-zA-Z][a-zA-Z0-9]*",
+            "ConstraintDescription": "must begin with a letter and contain only alphanumeric characters."
+        },
+
+        "DBPassword": {
+            "NoEcho": "true",
+            "Description": "Password MySQL database access",
+            "Type": "String",
+            "MinLength": "8",
+            "MaxLength": "41",
+            "AllowedPattern": "[a-zA-Z0-9]*",
+            "ConstraintDescription": "must contain only alphanumeric characters."
+        }
+    },
+	"Mappings" : {
+	  "TenantMap" : {
+			"os-kfc-in" : {
+			  "Tenantshort" : "kfcin"
+			},
+			"os-kfc-au" : {
+			  "Tenantshort" : "kfcau"
+			},
+			"os-kfc-jp" : {
+			  "Tenantshort" : "kfcjp"
+			},
+			"os-kfc-th" : {
+			  "Tenantshort" : "kfcth"
+			}
+		}	
+	},
+    "Resources": {
+		"orderservDBSubnetGroup": {
+            "Type": "AWS::RDS::DBSubnetGroup",
+            "Properties": {
+                "DBSubnetGroupDescription": "description",
+				"SubnetIds": [
+                    {
+					"Ref": "VPCSubnet1"
+					},
+					{
+					"Ref": "VPCSubnet2"
+					}
+                ],
+                "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}-${Tenant}-subnetgroup"
+                        }
+                    },
+                   {
+                        "Key": "Tenant",
+                        "Value": {
+                            "Fn::Sub" : "${Tenant}"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ]
+            }
+        },
+		"orderservDBParameterGroup": {
+			"Type" : "AWS::RDS::DBParameterGroup",
+			"Properties" : {
+				"Description" : {
+                            "Fn::Sub" : "${Environment}-${Tenant}-DBParamGroup"
+                        },
+				"Family" : "mysql8.0",
+				"Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}-${Tenant}-DBParamGroup"
+                        }
+                    },
+                   {
+                        "Key": "Tenant",
+                        "Value": {
+                            "Fn::Sub" : "${Tenant}"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ]
+			}
+		},
+		"orderservDBOptionGroup": {
+			"Type" : "AWS::RDS::OptionGroup",
+			"Properties" : {
+				"EngineName": "mysql",
+				"MajorEngineVersion": "8.0",
+				"OptionGroupDescription": {
+                            "Fn::Sub" : "${Environment}-${Tenant}-DBOptionGroup"
+                        },
+				"Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}-${Tenant}-DBOptionGroup"
+                        }
+                    },
+                   {
+                        "Key": "Tenant",
+                        "Value": {
+                            "Fn::Sub" : "${Tenant}"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ]
+			}
+		},
+        "MySQLRDS": {
+            "Type": "AWS::RDS::DBInstance",
+            "Properties": {
+                "DBInstanceIdentifier": {
+                  "Fn::Sub" : ["Orderserv${Environment}${Tenantshort}DBInstance",{"Tenantshort" : {"Fn::FindInMap":["TenantMap",{"Ref":"Tenant"},"Tenantshort"]}}]
+                },
+
+                "DBName": "OrderServReportingDb",
+                "DBInstanceClass": {
+                    "Ref": "DBInstanceClass"
+                },
+                "AllocatedStorage": {
+                    "Ref": "DBAllocatedStorage"
+                },
+                "Engine": "MySQL",
+                "EngineVersion": "8.0.28",
+                "MasterUsername": {
+                    "Ref": "DBUsername"
+                },
+                "MasterUserPassword": {
+                    "Ref": "DBPassword"
+                },
+				"DBParameterGroupName": {
+                    "Ref": "orderservDBParameterGroup"
+                },
+				"OptionGroupName": {
+                    "Ref": "orderservDBOptionGroup"
+                },
+				"StorageType" : "gp2",
+                "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}-${Tenant}-RDS"
+                        }
+                    },
+                   {
+                        "Key": "Tenant",
+                        "Value": {
+                            "Fn::Sub" : "${Tenant}"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+                "DeletionProtection" : true,
+                "EnableIAMDatabaseAuthentication" : false,
+                "VPCSecurityGroups" : [{
+                    
+                     "Ref": "VPCSecurityGroupIds"
+                }],
+                "DBSubnetGroupName" : {
+                    
+                     "Ref": "orderservDBSubnetGroup"
+                },
+                "PubliclyAccessible" : false,
+                "StorageEncrypted" : true,
+                "AutoMinorVersionUpgrade" : true,
+                "CopyTagsToSnapshot" : true,
+                "EnableCloudwatchLogsExports" : [ "error", "slowquery" ],
+                "OptionGroupName" : "default:mysql-8-0",
+                "Port" : {
+                    
+                     "Ref": "port"
+                },
+                "PreferredBackupWindow" : "15:08-15:38",
+                "PreferredMaintenanceWindow" : "wed:16:48-wed:17:18",
+                "BackupRetentionPeriod" : 1,
+                "MultiAZ" : {
+                    
+                     "Ref": "MultiAZ"
+                }
+
+
+            }
+        }
+    },
+    "Outputs": {
+        "ConnectionString": {
+            "Description": "connection string for the database",
+            "Value": {
+                "Fn::Join": [
+                    "",
+                    [
+                        {
+                            "Fn::GetAtt": [
+                                "MySQLRDS",
+                                "Endpoint.Address"
+                            ]
+                        },
+                        ":",
+                        {
+                            "Fn::GetAtt": [
+                                "MySQLRDS",
+                                "Endpoint.Port"
+                            ]
+                        }
+                    ]
+                ]
+            }
+        }
+    }
+}

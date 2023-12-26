@@ -1,0 +1,1730 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "OrderServ SNS Topic Cloudformation Template", 
+	"Parameters" : {
+		"Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"Tenant": {
+			"Type": "String",
+			"Description": "Enter the tenant/country key",
+			"Default": "os-kfc-in",
+			"MaxLength": 9,
+			"MinLength": 9
+		},
+		"AppName": {
+            "Type": "String",
+            "Default": "orderserv",
+            "Description": "Application Name"
+        }
+	},
+	"Conditions": {
+        "IsIndTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-in"
+            ]
+        },
+		"IsAusTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-au"
+            ]
+        },
+	"IsJapTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-jp"
+            ]
+        },
+	"IsThaTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-th"
+            ]
+        }
+    },
+	"Resources": {
+		"ReportExportEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "ReportExportEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-ReportExportEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-ReportExportEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"DeliveryDetailsUpdatedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Condition" : "IsAusTenant",
+		  "Properties" : {
+			  "DisplayName" : "DeliveryDetailsUpdatedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-DeliveryDetailsUpdatedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-DeliveryDetailsUpdatedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"DeliveryPartnerOrderCreatedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "DeliveryPartnerOrderCreatedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-DeliveryPartnerOrderCreatedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-DeliveryPartnerOrderCreatedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"CollectionPointUpdatedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "CollectionPointUpdatedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-CollectionPointUpdatedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-CollectionPointUpdatedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"CatalogUpdatedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "CatalogUpdatedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-CatalogUpdatedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-CatalogUpdatedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"StoreAddedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "StoreAddedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-StoreAddedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-StoreAddedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"DeliveryPartnersUpdatedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "DeliveryPartnersUpdatedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-DeliveryPartnersUpdatedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-DeliveryPartnersUpdatedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"HolidayAddedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "HolidayAddedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-HolidayAddedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-HolidayAddedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"HolidayRemovedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "HolidayRemovedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-HolidayRemovedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-HolidayRemovedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"ItemExcludedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "ItemExcludedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-ItemExcludedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-ItemExcludedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"ItemExclusionRemovedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "ItemExclusionRemovedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-ItemExclusionRemovedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-ItemExclusionRemovedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"OperatingHoursUpdatedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "OperatingHoursUpdatedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-OperatingHoursUpdatedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-OperatingHoursUpdatedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"OrderingAttributeUpdatedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "OrderingAttributeUpdatedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-OrderingAttributeUpdatedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-OrderingAttributeUpdatedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"ShutdownRemovedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "ShutdownRemovedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-ShutdownRemovedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-ShutdownRemovedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"ShutdownScheduledEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "ShutdownScheduledEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-ShutdownScheduledEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-ShutdownScheduledEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"TenderTypeUpdatedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "TenderTypeUpdatedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-TenderTypeUpdatedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-TenderTypeUpdatedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"CustomerUpdatedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "CustomerUpdatedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-CustomerUpdatedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-CustomerUpdatedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"OrderCancelledEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "OrderCancelledEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-OrderCancelledEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-OrderCancelledEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"OrderCheckedInEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "OrderCheckedInEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-OrderCheckedInEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-OrderCheckedInEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"OrderCreatedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "OrderCreatedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-OrderCreatedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-OrderCreatedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"OrderSubmittedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "OrderSubmittedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-OrderSubmittedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-OrderSubmittedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"PaymentReferenceUpdatedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "PaymentReferenceUpdatedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-PaymentReferenceUpdatedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-PaymentReferenceUpdatedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"StatusUpdatedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "StatusUpdatedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-StatusUpdatedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-StatusUpdatedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"TenderUpdatedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "TenderUpdatedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-TenderUpdatedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-TenderUpdatedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"CttRequestSavedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "CttRequestSavedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-CttRequestSavedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-CttRequestSavedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"CttResponseSavedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "CttResponseSavedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-CttResponseSavedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-CttResponseSavedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"GetStatusRequestSavedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "GetStatusRequestSavedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-GetStatusRequestSavedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-GetStatusRequestSavedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"GetStatusResponseSavedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "GetStatusResponseSavedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-GetStatusResponseSavedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-GetStatusResponseSavedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"OrderInjectionRequestSavedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "OrderInjectionRequestSavedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-OrderInjectionRequestSavedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-OrderInjectionRequestSavedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"OrderInjectionResponseSavedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "OrderInjectionResponseSavedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-OrderInjectionResponseSavedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-OrderInjectionResponseSavedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"Aggregatormenupublish" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "Aggregatormenupublish Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-Aggregatormenupublish"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-Aggregatormenupublish" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"ChannelWiseServicesRemovedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "ChannelWiseServicesRemovedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-ChannelWiseServicesRemovedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-ChannelWiseServicesRemovedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"ChannelWiseServicesUpdatedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "ChannelWiseServicesUpdatedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-ChannelWiseServicesUpdatedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-ChannelWiseServicesUpdatedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"OperativeStoresUpdatedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "OperativeStoresUpdatedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-OperativeStoresUpdatedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-OperativeStoresUpdatedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"TerminalRemovedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "TerminalRemovedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-TerminalRemovedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-TerminalRemovedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"TerminalUpdatedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "TerminalUpdatedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-TerminalUpdatedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-TerminalUpdatedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"CustomAttributesUpdatedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "CustomAttributesUpdatedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-CustomAttributesUpdatedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-CustomAttributesUpdatedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"AggregatorsMenuUpdateNotification" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "AggregatorsMenuUpdateNotification Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-AggregatorsMenuUpdateNotification"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-AggregatorsMenuUpdateNotification" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"AggregatorsOrderUpdateNotification" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "AggregatorsOrderUpdateNotification Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-AggregatorsOrderUpdateNotification"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-AggregatorsOrderUpdateNotification" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"AggregatorsItemExclusionInclusionNotification" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "AggregatorsItemExclusionInclusionNotification Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-AggregatorsItemExclusionInclusionNotification"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-AggregatorsItemExclusionInclusionNotification" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"AggregatorsStoreUpdateNotification" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "AggregatorsStoreUpdateNotification Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-AggregatorsStoreUpdateNotification"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-AggregatorsStoreUpdateNotification" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"AggregatorsOffersUpdateNotification" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "AggregatorsOffersUpdateNotification Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-AggregatorsOffersUpdateNotification"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-AggregatorsOffersUpdateNotification" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"AggregatorsUpsellUpdateNotification" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "AggregatorsUpsellUpdateNotification Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-AggregatorsUpsellUpdateNotification"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-AggregatorsUpsellUpdateNotification" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"AggregatorsDePollTimeNotification" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "AggregatorsDePollTimeNotification Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-AggregatorsDePollTimeNotification"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-AggregatorsDePollTimeNotification" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"OrderValidationFailedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "OrderValidationFailedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-OrderValidationFailedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-OrderValidationFailedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"OrderFailedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "OrderFailedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-OrderFailedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-OrderFailedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"CustomerBasicInformationSavedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "CustomerBasicInformationSavedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-CustomerBasicInformationSavedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-CustomerBasicInformationSavedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"SaveCustomerAddressEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "SaveCustomerAddressEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-SaveCustomerAddressEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-SaveCustomerAddressEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"SaveCustomerFavouriteOrderEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "SaveCustomerFavouriteOrderEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-SaveCustomerFavouriteOrderEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-SaveCustomerFavouriteOrderEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"SaveCustomerFavouriteStoreEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "SaveCustomerFavouriteStoreEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-SaveCustomerFavouriteStoreEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-SaveCustomerFavouriteStoreEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"PromotionActivateEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "PromotionActivateEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-PromotionActivateEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-PromotionActivateEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"PromotionDeactivateEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "PromotionDeactivateEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-PromotionDeactivateEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-PromotionDeactivateEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"PromotionApplicationEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Condition" : "IsAusTenant",
+		  "Properties" : {
+			  "DisplayName" : "PromotionApplicationEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-PromotionApplicationEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-PromotionApplicationEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"PromotionJPApplicationEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Condition" : "IsJapTenant",
+		  "Properties" : {
+			  "DisplayName" : "PromotionApplicationEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-PromotionApplicationEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-PromotionApplicationEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"PromotionTHApplicationEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Condition" : "IsThaTenant",
+		  "Properties" : {
+			  "DisplayName" : "PromotionTHApplicationEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-PromotionApplicationEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-PromotionApplicationEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"PosEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "PosEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-PosEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-PosEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"ZomatoUpdateOperatingHoursEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "ZomatoUpdateOperatingHoursEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-ZomatoUpdateOperatingHoursEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-ZomatoUpdateOperatingHoursEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"ZomatoOperatingHoursRemoveEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "ZomatoOperatingHoursRemoveEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-ZomatoOperatingHoursRemoveEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-ZomatoOperatingHoursRemoveEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"OrderRiderStatusChangedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "OrderRiderStatusChangedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-OrderRiderStatusChangedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-OrderRiderStatusChangedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"ProductMasterAddedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "ProductMasterAddedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-ProductMasterAddedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-ProductMasterAddedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"ImageUploadedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "ImageUploadedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-ImageUploadedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-ImageUploadedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"BasketCreatedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "BasketCreatedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-BasketCreatedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-BasketCreatedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"BasketRemovedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "BasketRemovedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-BasketRemovedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-BasketRemovedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"GiftCardUsageEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "GiftCardUsageEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-GiftCardUsageEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-GiftCardUsageEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"GiftCardPurchaseEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "GiftCardPurchaseEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-GiftCardPurchaseEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-GiftCardPurchaseEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"ZomatoUpdateOffersEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "ZomatoUpdateOffersEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-ZomatoUpdateOffersEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-ZomatoUpdateOffersEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"GiftCardPurchaseFailedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "GiftCardPurchaseFailedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-GiftCardPurchaseFailedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-GiftCardPurchaseFailedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"ItemOutOfStockEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Condition" : "IsAusTenant",
+		  "Properties" : {
+			  "DisplayName" : "ItemOutOfStockEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-ItemOutOfStockEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-ItemOutOfStockEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"ItemOutOfStockRemovedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Condition" : "IsAusTenant",
+		  "Properties" : {
+			  "DisplayName" : "ItemOutOfStockRemovedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-ItemOutOfStockRemovedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-ItemOutOfStockRemovedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"OrderRefundedEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Condition" : "IsJapTenant",
+		  "Properties" : {
+			  "DisplayName" : "OrderRefundedEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-OrderRefundedEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-OrderRefundedEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		}
+	},
+    "Outputs": {
+        "TenantSNSStack": {
+		    "Description": "SNS topic Stack for OrderServ",
+			"Value": {
+                "Fn::Sub": "${AWS::StackName}"
+            }
+        },	
+		"CollectionPointUpdatedEventSNSTopic": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "CollectionPointUpdatedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-CollectionPointUpdatedEvent"
+                }
+            }
+        },
+		"CatalogUpdatedEventSNSTopic": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "CatalogUpdatedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-CatalogUpdatedEvent"
+                }
+            }
+        },
+		"StoreAddedEventSNSTopic": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "StoreAddedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-StoreAddedEvent"
+                }
+            }
+        },
+		"DeliveryPartnersUpdatedEventSNSTopic": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "DeliveryPartnersUpdatedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-DeliveryPartnersUpdatedEvent"
+                }
+            }
+        },
+		"HolidayAddedEventSNSTopic": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "HolidayAddedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-HolidayAddedEvent"
+                }
+            }
+        },
+		"HolidayRemovedEventSNSTopic": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "HolidayRemovedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-HolidayRemovedEvent"
+                }
+            }
+        },
+		"ItemExcludedEventSNSTopic": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "ItemExcludedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-ItemExcludedEvent"
+                }
+            }
+        },
+		"ItemExclusionRemovedEventSNSTopic": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "ItemExclusionRemovedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-ItemExclusionRemovedEvent"
+                }
+            }
+        },
+		"OperatingHoursUpdatedEventSNSTopic": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "OperatingHoursUpdatedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-OperatingHoursUpdatedEvent"
+                }
+            }
+        },
+		"OrderingAttributeUpdatedEventSNSTopic": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "OrderingAttributeUpdatedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-OrderingAttributeUpdatedEvent"
+                }
+            }
+        },
+		"ShutdownRemovedEventSNSTopic": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "ShutdownRemovedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-ShutdownRemovedEvent"
+                }
+            }
+        },
+		"ShutdownScheduledEventSNSTopic": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "ShutdownScheduledEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-ShutdownScheduledEvent"
+                }
+            }
+        },
+		"TenderTypeUpdatedEventSNSTopic": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "TenderTypeUpdatedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-TenderTypeUpdatedEvent"
+                }
+            }
+        },
+		"CustomerUpdatedEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "CustomerUpdatedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-CustomerUpdatedEvent"
+                }
+            }
+        },
+		"OrderCancelledEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "OrderCancelledEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-OrderCancelledEvent"
+                }
+            }
+        },
+		"OrderCheckedInEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "OrderCheckedInEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-OrderCheckedInEvent"
+                }
+            }
+        },
+		"OrderCreatedEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "OrderCreatedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-OrderCreatedEvent"
+                }
+            }
+        },
+		"OrderSubmittedEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "OrderSubmittedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-OrderSubmittedEvent"
+                }
+            }
+        },
+		"PaymentReferenceUpdatedEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "PaymentReferenceUpdatedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-PaymentReferenceUpdatedEvent"
+                }
+            }
+        },
+		"StatusUpdatedEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "StatusUpdatedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-StatusUpdatedEvent"
+                }
+            }
+        },
+		"TenderUpdatedEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "TenderUpdatedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-TenderUpdatedEvent"
+                }
+            }
+        },
+		"CttRequestSavedEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "CttRequestSavedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-CttRequestSavedEvent"
+                }
+            }
+        },
+		"CttResponseSavedEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "CttResponseSavedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-CttResponseSavedEvent"
+                }
+            }
+        },
+		"GetStatusRequestSavedEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "GetStatusRequestSavedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-GetStatusRequestSavedEvent"
+                }
+            }
+        },
+		"GetStatusResponseSavedEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "GetStatusResponseSavedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-GetStatusResponseSavedEvent"
+                }
+            }
+        },
+		"OrderInjectionRequestSavedEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "OrderInjectionRequestSavedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-OrderInjectionRequestSavedEvent"
+                }
+            }
+        },
+		"OrderInjectionResponseSavedEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "OrderInjectionResponseSavedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-OrderInjectionResponseSavedEvent"
+                }
+            }
+        },
+		"ChannelWiseServicesRemovedEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "ChannelWiseServicesRemovedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-ChannelWiseServicesRemovedEvent"
+                }
+            }
+        },
+		"ChannelWiseServicesUpdatedEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "ChannelWiseServicesUpdatedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-ChannelWiseServicesUpdatedEvent"
+                }
+            }
+        },
+		"OperativeStoresUpdatedEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "OperativeStoresUpdatedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-OperativeStoresUpdatedEvent"
+                }
+            }
+        },
+		"TerminalRemovedEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "TerminalRemovedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-TerminalRemovedEvent"
+                }
+            }
+        },
+		"TerminalUpdatedEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "TerminalUpdatedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-TerminalUpdatedEvent"
+                }
+            }
+        },
+		"Aggregatormenupublish": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "Aggregatormenupublish"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-Aggregatormenupublish"
+                }
+            }
+        },
+		"CustomAttributesUpdatedEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "CustomAttributesUpdatedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-CustomAttributesUpdatedEvent"
+                }
+            }
+        },
+		"AggregatorsMenuUpdateNotification": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "AggregatorsMenuUpdateNotification"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-AggregatorsMenuUpdateNotification"
+                }
+            }
+        },
+		"AggregatorsOrderUpdateNotification": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "AggregatorsOrderUpdateNotification"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-AggregatorsOrderUpdateNotification"
+                }
+            }
+        },
+		"AggregatorsItemExclusionInclusionNotification": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "AggregatorsItemExclusionInclusionNotification"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-AggregatorsItemExclusionInclusionNotification"
+                }
+            }
+        },
+		"AggregatorsStoreUpdateNotification": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "AggregatorsStoreUpdateNotification"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-AggregatorsStoreUpdateNotification"
+                }
+            }
+        },
+		"AggregatorsOffersUpdateNotification": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "AggregatorsOffersUpdateNotification"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-AggregatorsOffersUpdateNotification"
+                }
+            }
+        },
+		"AggregatorsUpsellUpdateNotification": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "AggregatorsUpsellUpdateNotification"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-AggregatorsUpsellUpdateNotification"
+                }
+            }
+        },
+		"AggregatorsDePollTimeNotification": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "AggregatorsDePollTimeNotification"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-AggregatorsDePollTimeNotification"
+                }
+            }
+        },
+		"OrderValidationFailedEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "OrderValidationFailedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-OrderValidationFailedEvent"
+                }
+            }
+        },
+		"OrderFailedEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "OrderFailedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-OrderFailedEvent"
+                }
+            }
+        },
+		"CustomerBasicInformationSavedEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "CustomerBasicInformationSavedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-CustomerBasicInformationSavedEvent"
+                }
+            }
+        },
+		"SaveCustomerAddressEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "SaveCustomerAddressEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-SaveCustomerAddressEvent"
+                }
+            }
+        },
+		"SaveCustomerFavouriteOrderEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "SaveCustomerFavouriteOrderEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-SaveCustomerFavouriteOrderEvent"
+                }
+            }
+        },
+		"SaveCustomerFavouriteStoreEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "SaveCustomerFavouriteStoreEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-SaveCustomerFavouriteStoreEvent"
+                }
+            }
+        },
+		"PromotionActivateEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "PromotionActivateEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-PromotionActivateEvent"
+                }
+            }
+        },
+		"PromotionDeactivateEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "PromotionDeactivateEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-PromotionDeactivateEvent"
+                }
+            }
+        },
+		"PosEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "PosEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-PosEvent"
+                }
+            }
+        },
+		"ZomatoUpdateOperatingHoursEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "ZomatoUpdateOperatingHoursEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-ZomatoUpdateOperatingHoursEvent"
+                }
+            }
+        },
+		"ZomatoOperatingHoursRemoveEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "ZomatoOperatingHoursRemoveEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-ZomatoOperatingHoursRemoveEvent"
+                }
+            }
+        },
+		"OrderRiderStatusChangedEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "OrderRiderStatusChangedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-OrderRiderStatusChangedEvent"
+                }
+            }
+        },
+		"ProductMasterAddedEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "ProductMasterAddedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-ProductMasterAddedEvent"
+                }
+            }
+        },
+		"ImageUploadedEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "ImageUploadedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-ImageUploadedEvent"
+                }
+            }
+        },
+		"GiftCardUsageEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "GiftCardUsageEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-GiftCardUsageEvent"
+                }
+            }
+        },
+		"GiftCardPurchaseEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "GiftCardPurchaseEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-GiftCardPurchaseEvent"
+                }
+            }
+        },
+		"ZomatoUpdateOffersEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "ZomatoUpdateOffersEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-ZomatoUpdateOffersEvent"
+                }
+            }
+        },
+		"GiftCardPurchaseFailedEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "GiftCardPurchaseFailedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-GiftCardPurchaseFailedEvent"
+                }
+            }
+        },
+		"OrderRefundedEvent": {
+            "Description": "SNS topic for OrderServ",
+			"Condition" : "IsJapTenant",
+            "Value": {
+                "Ref": "OrderRefundedEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-OrderRefundedEvent"
+                }
+            }
+        },
+		"PromotionTHApplicationEvent": {
+            "Description": "SNS topic for OrderServ",
+			"Condition" : "IsThaTenant",
+            "Value": {
+                "Ref": "PromotionTHApplicationEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-PromotionTHApplicationEvent"
+                }
+            }
+        }
+	}
+}

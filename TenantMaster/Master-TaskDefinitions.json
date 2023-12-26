@@ -1,0 +1,1594 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "AWS CloudFormation Template for Master Task Definitions",
+    "Parameters": {
+        "Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+        "Tenant": {
+            "Type": "String",
+            "Description": "Enter the tenant/country key",
+            "Default": "os-kfc-in",
+            "MaxLength": 9,
+            "MinLength": 9
+        },
+        "AppName": {
+            "Type": "String",
+            "Default": "orderserv",
+            "Description": "Application Name"
+        },
+        "NestStackBucketName": {
+            "Type": "String",
+            "Default": "orderserv-cloudformation-stack-bucket",
+            "Description": "Name of the S3 bucket where Nest CFTs and Lambda zip files are placed"
+        },
+		"secretID" :{
+			"Type": "String",
+			"Default": "development/gitlabtoken-qjgcc0",
+            "Description": "Enter the Gitlab Secret ID"		
+		},
+		"ECRAcntID" :{
+			"Type": "String",
+			"Default": "971757624067",
+            "Description": "Enter the ECR account ID"		
+		},
+        "NestStackBucketNameENVPrefix": {
+            "Type": "String",
+            "Default": "DEV",
+            "Description": "Enter the Name of ENV as PROD",
+            "MaxLength": 4,
+            "MinLength": 2
+        },
+        "TenantRolePolicyStackName": {
+            "Type": "String",
+            "Description": "Enter the TenantRolePolicyStackName"
+        }
+    },
+	"Conditions": {
+        "IsIndTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-in"
+            ]
+        },
+		"IsAusTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-au"
+            ]
+        },
+		"IsNotAusTenant": {
+            "Fn::Not": [{
+               "Fn::Equals" : [
+					{
+						"Ref": "Tenant"
+					},
+					"os-kfc-au"
+            ]
+			}]
+        },
+		"IsJapTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-jp"
+            ]
+        },
+		"IsThaTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-th"
+            ]
+        }
+    },
+    "Resources": {
+        "orderservecsloggroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+                "LogGroupName": {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-ecs"
+                },
+                "RetentionInDays": 14
+            }
+        },
+        "orderservstoreopstaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservstoreops/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		"orderservbasketmgmttaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservbasketmgmt/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+        "orderservrecomgmttaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservrecomgmt/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+        "orderservcustomermgmttaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservcustomermgmt/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+        "orderservcustomerordhisttaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservcustomerordhist/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+        "orderservordermgmtsvctaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservordermgmtsvc/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+        "orderservtaxconfigsvctaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+			"Condition" : "IsIndTenant",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservtaxconfigsvc/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		  "orderservjptaxconfigsvctaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+			"Condition" : "IsJapTenant",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservjptaxconfigsvc/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		"orderservadditnlchrgssvctaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservadditnlchrgssvc/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		"orderservcoupnwaltmgmttaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservcoupnwaltmgmt/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		"orderservmenumastertaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservmenumaster/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		"orderservprdtsmgmttaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservprdtsmgmt/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		"orderservolouitaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservoloui/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					},
+					"secretID" :{
+						"Ref" : "secretID"
+					}
+                }
+            }
+        },
+		"orderservolointtaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservolointegration/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					},
+					"secretID" :{
+						"Ref" : "secretID"
+					}
+                }
+            }
+        },
+		"orderservpaymtsvctaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+			"Condition" : "IsIndTenant",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservpaymtsvc/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		"orderservaupaymtsvctaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+			"Condition" : "IsAusTenant",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservaupaymtsvc/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		"orderservthpaymtsvctaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+			"Condition" : "IsThaTenant",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservthpaymtsvc/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		"orderservjppaymtsvctaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+			"Condition" : "IsJapTenant",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservjppaymtsvc/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		"orderservthpaymtsvctaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+			"Condition" : "IsThaTenant",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservthpaymtsvc/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		"orderservdelivryprtnrsvctaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+			"Condition" : "IsAusTenant",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservdelivryprtnrsvc/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		"orderservthdelivryprtnrsvctaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+			"Condition" : "IsThaTenant",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservdelivryprtnrsvc/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		"orderservjpdelivryprtnrsvctaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+			"Condition" : "IsJapTenant",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservdelivryprtnrsvc/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		"orderservpromtnsvctaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservpromtnsvc/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		"orderservgiftcardsvctaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+			"Condition" : "IsIndTenant",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservgiftcardsvc/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		
+		"orderservjpgiftcardsvctaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+			"Condition" : "IsJapTenant",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservgiftcardsvc/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		"orderservalohapossvctaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+			"Condition" : "IsIndTenant",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservalohapossvc/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		"orderservcbohpossvctaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+			"Condition" : "IsJapTenant",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservcbohpossvc/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		"orderservpromtnwebapitaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+			"Condition" : "IsNotAusTenant",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservpromtnwebapi/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		"orderservcustorchestrtntaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservcustorchestrtn/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		"orderservdilpossvctaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+			"Condition" : "IsIndTenant",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservdilpossvc/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		"orderservlsrsapphirepossvctaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+			"Condition" : "IsIndTenant",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservlsrsapphirepossvc/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		"orderservalohaoepossvctaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+			"Condition" : "IsAusTenant",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservalohaoepossvc/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		"orderservthmwrpossvctaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+			"Condition" : "IsThaTenant",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservthmwrpossvc/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		"orderservthalohaoepossvctaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+			"Condition" : "IsThaTenant",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservalohaoepossvc/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		"orderservgstcustmgmttaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservgstcustmgmt/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		"orderservcallcentertaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+			"Condition" : "IsIndTenant",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservcallcenter/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        },
+		"orderservdeldragtailsvctaskdef": {
+            "Type": "AWS::CloudFormation::Stack",
+			"Condition" : "IsJapTenant",
+            "Properties": {
+                "TemplateURL": {
+                    "Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservdeldragtailsvc/TaskDefinitions.json"
+                },
+                "TimeoutInMinutes": "60",
+                "Parameters": {
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Tenant": {
+                        "Ref": "Tenant"
+                    },
+                    "AppName": {
+                        "Ref": "AppName"
+                    },
+                    "TenantRolePolicyStackName": {
+                        "Ref": "TenantRolePolicyStackName"
+                    },
+					"ECRAcntID" :{
+						"Ref" : "ECRAcntID"
+					}
+                }
+            }
+        }
+	},
+    "Outputs": {
+        "TaskDefStackName": {
+            "Value": {
+                "Fn::Sub": "${AWS::StackName}"
+            }
+        },
+        "orderservstoreopstaskdef": {
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservstoreopstaskdef",
+                    "Outputs.orderservstoreopstaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservstoreopstaskdef"
+                }
+            }
+        },
+		"orderservbasketmgmttaskdef": {
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservbasketmgmttaskdef",
+                    "Outputs.orderservbasketmgmttaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservbasketmgmttaskdef"
+                }
+            }
+        },
+        "orderservrecomgmttaskdef": {
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservrecomgmttaskdef",
+                    "Outputs.orderservrecomgmttaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservrecomgmttaskdef"
+                }
+            }
+        },
+        "orderservcustomermgmttaskdef": {
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservcustomermgmttaskdef",
+                    "Outputs.orderservcustomermgmttaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservcustomermgmttaskdef"
+                }
+            }
+        },
+        "orderservcustomerordhisttaskdef": {
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservcustomerordhisttaskdef",
+                    "Outputs.orderservcustomerordhisttaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservcustomerordhisttaskdef"
+                }
+            }
+        },
+        "orderservordermgmtsvctaskdef": {
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservordermgmtsvctaskdef",
+                    "Outputs.orderservordermgmtsvctaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservordermgmtsvctaskdef"
+                }
+            }
+        },
+        "orderservtaxconfigsvctaskdef": {
+			"Condition" : "IsIndTenant",
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservtaxconfigsvctaskdef",
+                    "Outputs.orderservtaxconfigsvctaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservtaxconfigsvctaskdef"
+                }
+            }
+        },
+		  "orderservjptaxconfigsvctaskdef": {
+			"Condition" : "IsJapTenant",
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservjptaxconfigsvctaskdef",
+                    "Outputs.orderservjptaxconfigsvctaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservjptaxconfigsvctaskdef"
+                }
+            }
+        },
+		"orderservadditnlchrgssvctaskdef": {
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservadditnlchrgssvctaskdef",
+                    "Outputs.orderservadditnlchrgssvctaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservadditnlchrgssvctaskdef"
+                }
+            }
+        },
+		"orderservcoupnwaltmgmttaskdef": {
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservcoupnwaltmgmttaskdef",
+                    "Outputs.orderservcoupnwaltmgmttaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservcoupnwaltmgmttaskdef"
+                }
+            }
+        },
+		"orderservmenumastertaskdef": {
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservmenumastertaskdef",
+                    "Outputs.orderservmenumastertaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservmenumastertaskdef"
+                }
+            }
+        },
+		"orderservprdtsmgmttaskdef": {
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservprdtsmgmttaskdef",
+                    "Outputs.orderservprdtsmgmttaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservprdtsmgmttaskdef"
+                }
+            }
+        },
+		"orderservolouitaskdef": {
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservolouitaskdef",
+                    "Outputs.orderservolouitaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservolouitaskdef"
+                }
+            }
+        },
+		"orderservolointtaskdef": {
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservolointtaskdef",
+                    "Outputs.orderservolointtaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservolointtaskdef"
+                }
+            }
+        },
+		"orderservpaymtsvctaskdef": {
+			"Condition" : "IsIndTenant",
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservpaymtsvctaskdef",
+                    "Outputs.orderservpaymtsvctaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservpaymtsvctaskdef"
+                }
+            }
+        },
+		"orderservaupaymtsvctaskdef": {
+			"Condition" : "IsAusTenant",
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservaupaymtsvctaskdef",
+                    "Outputs.orderservaupaymtsvctaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservaupaymtsvctaskdef"
+                }
+            }
+        },
+		"orderservjppaymtsvctaskdef": {
+			"Condition" : "IsJapTenant",
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservjppaymtsvctaskdef",
+                    "Outputs.orderservjppaymtsvctaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservjppaymtsvctaskdef"
+                }
+            }
+        },
+		"orderservthpaymtsvctaskdef": {
+			"Condition" : "IsThaTenant",
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservthpaymtsvctaskdef",
+                    "Outputs.orderservthpaymtsvctaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservthpaymtsvctaskdef"
+                }
+            }
+        },
+		"orderservdelivryprtnrsvctaskdef": {
+			"Condition" : "IsAusTenant",
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservdelivryprtnrsvctaskdef",
+                    "Outputs.orderservdelivryprtnrsvctaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservdelivryprtnrsvctaskdef"
+                }
+            }
+        },
+		"orderservjpdelivryprtnrsvctaskdef": {
+			"Condition" : "IsJapTenant",
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservjpdelivryprtnrsvctaskdef",
+                    "Outputs.orderservjpdelivryprtnrsvctaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservjpdelivryprtnrsvctaskdef"
+                }
+            }
+        },
+		"orderservthdelivryprtnrsvctaskdef": {
+			"Condition" : "IsThaTenant",
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservthdelivryprtnrsvctaskdef",
+                    "Outputs.orderservthdelivryprtnrsvctaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservthdelivryprtnrsvctaskdef"
+                }
+            }
+        },
+		"orderservpromtnsvctaskdef": {
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservpromtnsvctaskdef",
+                    "Outputs.orderservpromtnsvctaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservpromtnsvctaskdef"
+                }
+            }
+        },
+		"orderservgiftcardsvctaskdef": {
+			"Condition" : "IsIndTenant",
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservgiftcardsvctaskdef",
+                    "Outputs.orderservgiftcardsvctaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservgiftcardsvctaskdef"
+                }
+            }
+        },
+		"orderservjpgiftcardsvctaskdef": {
+			"Condition" : "IsJapTenant",
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservjpgiftcardsvctaskdef",
+                    "Outputs.orderservjpgiftcardsvctaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservgiftcardsvctaskdef"
+                }
+            }
+        },
+		"orderservalohapossvctaskdef": {
+			"Condition" : "IsIndTenant",
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservalohapossvctaskdef",
+                    "Outputs.orderservalohapossvctaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservalohapossvctaskdef"
+                }
+            }
+        },
+		"orderservpromtnwebapitaskdef": {
+			"Condition" : "IsNotAusTenant",
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservpromtnwebapitaskdef",
+                    "Outputs.orderservpromtnwebapitaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservpromtnwebapitaskdef"
+                }
+            }
+        },
+		"orderservcustorchestrtntaskdef": {
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservcustorchestrtntaskdef",
+                    "Outputs.orderservcustorchestrtntaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservcustorchestrtntaskdef"
+                }
+            }
+        },
+		"orderservlsrsapphirepossvctaskdef": {
+			"Condition" : "IsIndTenant",
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservlsrsapphirepossvctaskdef",
+                    "Outputs.orderservlsrsapphirepossvctaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservlsrsapphirepossvctaskdef"
+                }
+            }
+        },
+		"orderservdilpossvctaskdef": {
+			"Condition" : "IsIndTenant",
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservdilpossvctaskdef",
+                    "Outputs.orderservdilpossvctaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservdilpossvctaskdef"
+                }
+            }
+        },
+		"orderservalohaoepossvctaskdef": {
+			"Condition" : "IsAusTenant",
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservalohaoepossvctaskdef",
+                    "Outputs.orderservalohaoepossvctaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservalohaoepossvctaskdef"
+                }
+            }
+        },
+		"orderservthmwrpossvctaskdef": {
+			"Condition" : "IsThaTenant",
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservthmwrpossvctaskdef",
+                    "Outputs.orderservthmwrpossvctaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservthmwrpossvctaskdef"
+                }
+            }
+        },
+		"orderservthalohaoepossvctaskdef": {
+			"Condition" : "IsThaTenant",
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservthalohaoepossvctaskdef",
+                    "Outputs.orderservthalohaoepossvctaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservthalohaoepossvctaskdef"
+                }
+            }
+        },
+		"orderservcbohpossvctaskdef": {
+			"Condition" : "IsJapTenant",
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservcbohpossvctaskdef",
+                    "Outputs.orderservcbohpossvctaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservcbohpossvctaskdef"
+                }
+            }
+        },
+		"orderservgstcustmgmttaskdef": {
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservgstcustmgmttaskdef",
+                    "Outputs.orderservgstcustmgmttaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservgstcustmgmttaskdef"
+                }
+            }
+        },
+		"orderservcallcentertaskdef": {
+			"Condition" : "IsIndTenant",
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservcallcentertaskdef",
+                    "Outputs.orderservcallcentertaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservcallcentertaskdef"
+                }
+            }
+        },
+		"orderservdeldragtailsvctaskdef": {
+			"Condition" : "IsJapTenant",
+            "Value": {
+                "Fn::GetAtt": [
+                    "orderservdeldragtailsvctaskdef",
+                    "Outputs.orderservdeldragtailsvctaskdef"
+                ]
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservdeldragtailsvctaskdef"
+                }
+            }
+        }
+	}
+}

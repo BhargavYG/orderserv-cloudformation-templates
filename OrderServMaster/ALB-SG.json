@@ -1,0 +1,130 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "AWS CloudFormation Template for ALB's SecurityGroup",
+	"Parameters": {
+        "VpcId":{
+            "Type":"AWS::EC2::VPC::Id",
+            "Description":"Select the VPC."
+        },
+		"Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"AppName": {
+			"Type": "String",
+			"Default": "orderserv",
+			"Description": "Application Name"
+		}
+    },
+    "Resources": {
+        "ALBSecurityGroup" : {
+            "Type" : "AWS::EC2::SecurityGroup",
+            "Properties" : {
+                "GroupName" : {
+                    "Fn::Sub": "orderserv-${Environment}-alb-sg"
+                },
+                "GroupDescription" : {
+                    "Fn::Sub": "orderserv-${Environment}-alb-sg"
+                },
+                "VpcId" : {"Ref" : "VpcId"},
+                "Tags" : [ 
+                    {"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-alb-sg" } }, 
+					{"Key": "AppName", "Value": { "Ref": "AppName" }},
+					{"Key": "Environment", "Value": { "Ref": "Environment" }},
+					{"Key": "Tenant", "Value": "all"}
+                    ],
+                "SecurityGroupIngress" : [ 
+                    { "IpProtocol" : "tcp", "FromPort" : 80, "ToPort" : 80, "CidrIp" : "0.0.0.0/0" }
+                    ],
+                "SecurityGroupEgress": [
+                    { "IpProtocol": "-1", "CidrIp": "0.0.0.0/0" }
+                    ]
+            }
+        },
+		"VPCEndpointSecurityGroup" : {
+            "Type" : "AWS::EC2::SecurityGroup",
+            "Properties" : {
+                "GroupName" : {
+                    "Fn::Sub": "orderserv-${Environment}-vpce-sg"
+                },
+                "GroupDescription" : {
+                    "Fn::Sub": "orderserv-${Environment}-vpce-sg"
+                },
+                "VpcId" : {"Ref" : "VpcId"},
+                "Tags" : [ 
+                    {"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-vpce-sg" } }, 
+					{"Key": "AppName", "Value": { "Ref": "AppName" }},
+					{"Key": "Environment", "Value": { "Ref": "Environment" }},
+					{"Key": "Tenant", "Value": "all"}
+                    ],
+                "SecurityGroupEgress": [
+                    { "IpProtocol": "-1", "CidrIp": "0.0.0.0/0" }
+                    ]
+            }
+        },
+		"LambdaSecurityGroup" : {
+            "Type" : "AWS::EC2::SecurityGroup",
+			"DependsOn" : "ALBSecurityGroup",
+            "Properties" : {
+                "GroupName" : {
+                    "Fn::Sub": "orderserv-${Environment}-Lambda-sg"
+                },
+                "GroupDescription" : {
+                    "Fn::Sub": "orderserv-${Environment}-Lambda-sg"
+                },
+                "VpcId" : {"Ref" : "VpcId"},
+                "Tags": [
+                        {"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-Lambda-SG" } }, 
+                        {"Key": "AppName", "Value": { "Ref": "AppName" }},
+                        {"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": "all"}
+                ],
+                "SecurityGroupIngress" : [ 
+                    { "IpProtocol": "tcp", "FromPort": 8001, "ToPort": 9999, "SourceSecurityGroupId": { "Ref": "ALBSecurityGroup"}, "Description": "Access from ALB"  }
+					],
+                "SecurityGroupEgress": [
+                    { "IpProtocol": "-1", "CidrIp": "0.0.0.0/0" }
+                    ]
+            }
+        }
+    },
+    "Outputs": {
+        "ALBSecurityGroup": {
+            "Description": "",
+            "Value": {
+                "Ref": "ALBSecurityGroup"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-ALBSecurityGroup"
+                }
+            }
+        },
+		"VPCEndpointSecurityGroup": {
+            "Description": "",
+            "Value": {
+                "Ref": "VPCEndpointSecurityGroup"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-VPCEndpointSecurityGroup"
+                }
+            }
+        },
+		"LambdaSecurityGroup": {
+            "Description": "",
+            "Value": {
+                "Ref": "LambdaSecurityGroup"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-LambdaSecurityGroup"
+                }
+            }
+        }
+    }
+}

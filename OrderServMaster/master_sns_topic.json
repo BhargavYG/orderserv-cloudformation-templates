@@ -1,0 +1,149 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "OrderServ SNS Topic Cloudformation Template", 
+	"Parameters" : {
+		"Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"AppName": {
+            "Type": "String",
+            "Default": "orderserv",
+            "Description": "Application Name"
+        }
+	},
+	"Resources": {
+		"EmailFailureEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "EmailFailureEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-EmailFailureEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-EmailFailureEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }}
+					] 
+			}
+		},
+		"SendSMSEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "SendSMSEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-SendSMSEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-SendSMSEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }}
+					] 
+			}
+		},
+		"SendPushNotificationEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "SendPushNotificationEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-SendPushNotificationEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-SendPushNotificationEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }}
+					] 
+			}
+		},
+		"SendEmailEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "SendEmailEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-SendEmailEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-SendEmailEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }}
+					] 
+			}
+		},
+		"AddDeviceNotificationsEvent" :
+		{
+		  "Type" : "AWS::SNS::Topic",
+		  "Properties" : {
+			  "DisplayName" : "AddDeviceNotificationsEvent Notification",
+			  "TopicName" : {"Fn::Sub": "orderserv-${Environment}-AddDeviceNotificationsEvent"},
+			  "Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-AddDeviceNotificationsEvent" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }}
+					] 
+			}
+		}
+	},
+    "Outputs": {
+		"MasterSNSStack": {
+		    "Description": "Master SNS topic Stack for OrderServ",
+			"Value": {
+                "Fn::Sub": "${AWS::StackName}"
+            }
+        },	
+		"EmailFailureEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "EmailFailureEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-EmailFailureEvent"
+                }
+            }
+        },
+		"SendSMSEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "SendSMSEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-SendSMSEvent"
+                }
+            }
+        },
+		"SendPushNotificationEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "SendPushNotificationEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-SendPushNotificationEvent"
+                }
+            }
+        },
+		"SendEmailEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "SendEmailEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-SendEmailEvent"
+                }
+            }
+        },
+		"AddDeviceNotificationsEvent": {
+            "Description": "SNS topic for OrderServ",
+            "Value": {
+                "Ref": "AddDeviceNotificationsEvent"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-AddDeviceNotificationsEvent"
+                }
+            }
+        }
+	}
+}

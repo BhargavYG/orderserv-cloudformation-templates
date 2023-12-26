@@ -1,0 +1,404 @@
+{
+    "AWSTemplateFormatVersion" : "2010-09-09",
+	"Parameters": {
+		"AdminUISSLcertificateARN" :{
+			"Type": "String",
+			"Description": "SSLCertificateArn created in N.virginia region for Admin Domain"
+		},
+		"OLOUISSLcertificateARN" :{
+			"Type": "String",
+			"Description": "SSLCertificateArn created in N.virginia region for OLO UI"
+		},
+		"Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"AppName": {
+			"Type": "String",
+			"Default": "orderserv",
+			"Description": "Application Name"
+		},
+		"Tenant": {
+            "Type": "String",
+            "Description": "Enter the tenant/country key",
+            "Default": "os-kfc-in",
+            "MaxLength": 9,
+            "MinLength": 9
+        },
+		"AdminUIDomainName": {
+			"Type": "String",
+			"Default": "kfc-in-admin",
+			"Description": "Admin UI Domain name to form <ENV>.<AdminUIDomainName>.cognizantorderservnxtgen.com"
+		},
+		"OLOUIGWID" :{
+			"Type": "String",
+			"Description": "OLOUIGWID if already created"
+		},
+		"OLOUIDomainName": {
+			"Type": "String",
+			"Default": "kfc-in",
+			"Description": "OLOUI Domain name to form <ENV>.<OLOUIDomainName>.cognizantorderservnxtgen.com"
+		},
+		"RegisteredDomainName": {
+			"Type": "String",
+			"Default": "cognizantorderservnxtgen.com",
+			"Description": "Enter the Registered Domain name from Route53"
+		},
+		"AkamaiOAIForEnv" :{
+			"Type": "String",
+			"Description": "Enter the Akamai OAI For specific Env"
+		},
+		"PRODAdminUIDomainName": {
+			"Type": "String",
+			"Default": "admin-orderserv.kfc.co.in",
+			"Description": "Fully qualified domain name to be used when Environment=prod"
+		},
+		"PRODOLOUIDomainName": {
+			"Type": "String",
+			"Default": "online-test.kfc.co.in",
+			"Description": "Fully qualified domain name to be used when Environment=prod"
+		},
+		"WafWebACLArnName": {
+			"Type": "String",
+			"Default": "global/webacl/yum-akamai-whitelist-acl/b664b0e9-28af-4538-9122-0cef7602c98c",
+			"Description": "Waf WebACLArn name to be used"
+		},
+		"WafRegion": {
+			"Type": "String",
+			"Description": "Full ARN resources Name of the Waf WebACL",
+			"Default": "us-east-1"
+		},
+		"AdminUIOAIforCF" :{
+			"Type": "String",
+			"Description": "OAI created in S3 tenant file for Admin"
+		}
+		
+	},
+	"Conditions": {
+        "IsProd": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Environment"
+                },
+                "prod"
+            ]
+        },
+		"IsUat": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Environment"
+                },
+                "uat"
+            ]
+        },
+		"EnableWafWebACL": {
+            "Fn::Or": [
+                {
+                    "Condition": "IsProd"
+                },
+                {
+                    "Condition": "IsUat"
+                }
+            ]
+        }	
+	},
+    "Resources" : {
+		"AdminUICachePolicy": {
+			"Type": "AWS::CloudFront::CachePolicy",
+			"Properties": {
+				"CachePolicyConfig": {
+					"DefaultTTL": 86400,
+					"MaxTTL": 31536000,
+					"MinTTL": 1,
+					"Name": {
+						"Fn::Sub": "${Environment}-${Tenant}-AdminUICachePolicy"
+					},
+					"ParametersInCacheKeyAndForwardedToOrigin": {
+						"CookiesConfig": {
+							"CookieBehavior": "none"
+						},
+						"EnableAcceptEncodingBrotli": true,
+						"EnableAcceptEncodingGzip": true,
+						"HeadersConfig": {
+							"HeaderBehavior": "none"
+						},
+						"QueryStringsConfig": {
+							"QueryStringBehavior": "none"
+						}
+					}
+				}
+			}
+		},
+		"OLOCachePolicy": {
+			"Type": "AWS::CloudFront::CachePolicy",
+			"Properties": {
+				"CachePolicyConfig": {
+					"DefaultTTL": 3600,
+					"MaxTTL": 3600,
+					"MinTTL": 1,
+					"Name": {
+						"Fn::Sub": "${Environment}-${Tenant}-OLOCachePolicy"
+					},
+					"ParametersInCacheKeyAndForwardedToOrigin": {
+						"CookiesConfig": {
+							"CookieBehavior": "none"
+						},
+						"EnableAcceptEncodingBrotli": true,
+						"EnableAcceptEncodingGzip": true,
+						"HeadersConfig": {
+							"HeaderBehavior": "whitelist",
+							"Headers": [ "Authorization","x-correlation-request-id","x-correlation-session-id"]
+						},
+						"QueryStringsConfig": {
+							"QueryStringBehavior": "none"
+						}
+					}
+				}
+			}
+		},
+		"OloAuthCachePolicy": {
+			"Type": "AWS::CloudFront::CachePolicy",
+			"Properties": {
+				"CachePolicyConfig": {
+					"DefaultTTL": 0,
+					"MaxTTL": 1,
+					"MinTTL": 0,
+					"Name": {
+						"Fn::Sub": "${Environment}-${Tenant}-OloAuthCachePolicy"
+					},
+					"ParametersInCacheKeyAndForwardedToOrigin": {
+						"CookiesConfig": {
+							"CookieBehavior": "none"
+						},
+						"EnableAcceptEncodingBrotli": true,
+						"EnableAcceptEncodingGzip": true,
+						"HeadersConfig": {
+							"HeaderBehavior": "whitelist",
+							"Headers": [ "Authorization","x-correlation-request-id"]
+						},
+						"QueryStringsConfig": {
+							"QueryStringBehavior": "none"
+						}
+					}
+				}
+			}
+		},
+		"OLOUIOriginRequestPolicy": {
+            "Type": "AWS::CloudFront::OriginRequestPolicy",
+            "Properties": {
+                "OriginRequestPolicyConfig": {
+                    "CookiesConfig": {
+                        "CookieBehavior": "none"
+                    },
+                    "HeadersConfig": {
+                        "HeaderBehavior": "whitelist",
+						"Headers": ["x-correlation-request-id","x-correlation-session-id","referer","user-agent","x-client-id","x-api-key"]
+                    },
+                    "QueryStringsConfig": {
+                        "QueryStringBehavior": "all"
+                    },
+                    "Name": {
+						"Fn::Sub": "${Environment}-${Tenant}-OLOUIOriginRequestPolicy"
+					}
+                }
+            }
+        },
+		"AdminUIDistribution" : {
+            "Type" : "AWS::CloudFront::Distribution",
+			"DependsOn": ["AdminUICachePolicy"],
+            "Properties" : {
+                "DistributionConfig" : {
+					"CustomErrorResponses":[
+						{
+						  "ErrorCachingMinTTL" : 60,
+						  "ErrorCode" : 403,
+						  "ResponseCode" : 200,
+						  "ResponsePagePath" : "/index.html"
+						}
+					],
+                    "Origins" : [ 
+					{
+						"Id" : "adminuiS3Origin",
+						"S3OriginConfig": {
+                                "OriginAccessIdentity": {
+                                    "Fn::Join": ["/",["origin-access-identity","cloudfront",{"Ref" : "AdminUIOAIforCF"}]]
+                                }
+                        },
+						"DomainName" : { "Fn::Sub" : "${AppName}-${AWS::Region}-${Environment}-${Tenant}-admin-ui.s3.${AWS::Region}.amazonaws.com" }
+					},
+					{
+						"Id" : "akamaiSureRouteS3Origin",
+						"DomainName" : { "Fn::Sub" : "${AppName}-${AWS::Region}-${Environment}-olo-content.s3.amazonaws.com" },
+						"S3OriginConfig" : {
+							"OriginAccessIdentity" : { 
+								"Fn::Join": ["/",["origin-access-identity","cloudfront",{"Ref" : "AkamaiOAIForEnv"}]]
+							}
+						}
+					}
+					],
+					"DefaultRootObject": "index.html",
+                    "Enabled" : "true",
+					"Aliases" : [
+									{"Fn::If" : [
+										"IsProd",
+										{"Ref" : "PRODAdminUIDomainName"},
+										{ 
+											"Fn::Join": ["",[{"Ref" : "Environment"},"-",{"Ref" : "AdminUIDomainName"},".",{"Ref" : "RegisteredDomainName"}]]
+										}
+									]}
+								],
+                    "Comment" : { "Fn::Sub": "${Environment}-${Tenant}-AdminUI" },
+					"DefaultCacheBehavior" : {
+                        "TargetOriginId" : "adminuiS3Origin",
+						"AllowedMethods" : [ "GET", "HEAD" ],
+                        "CachePolicyId" : {"Ref" : "AdminUICachePolicy"},
+                        "ViewerProtocolPolicy" : "https-only",
+                        "MinTTL" : "50"
+                    },
+					"CacheBehaviors":[
+					{
+                            "AllowedMethods" : [ "GET", "HEAD", "OPTIONS" ],  
+							"CachedMethods" : [ "GET", "HEAD", "OPTIONS" ],
+                            "TargetOriginId" : "akamaiSureRouteS3Origin",
+                            "ViewerProtocolPolicy" : "https-only",
+							"CachePolicyId" : "658327ea-f89d-4fab-a63d-7e88639e58f6",
+                            "PathPattern" : "akamai/*"
+                        }
+					],                    
+                   "ViewerCertificate": { 
+						"SslSupportMethod" : "sni-only",
+						"AcmCertificateArn" : {"Ref": "AdminUISSLcertificateARN"},
+						"MinimumProtocolVersion" : "TLSv1.2_2021"						
+						},
+                   "WebACLId" :  {"Fn::If" : [
+						"EnableWafWebACL",
+						{ 
+							"Fn::Join": [":",["arn:aws:wafv2",{"Ref" : "WafRegion"},{"Ref":"AWS::AccountId"},{"Ref" : "WafWebACLArnName"}]]
+						},
+						{"Ref" : "AWS::NoValue"}
+					]}					
+                },
+				"Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-AdminUIDistribution" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+            }
+        },
+		"OLOUIDistribution" : {
+            "Type" : "AWS::CloudFront::Distribution",
+			"DependsOn" :["OLOCachePolicy","OLOUICDNFN","OloAuthCachePolicy"],
+            "Properties" : {
+                "DistributionConfig" : {
+                    "Origins" : [ 
+					{
+						"Id" : "olouiorigin",
+						"DomainName" : { "Fn::Sub" : "${OLOUIGWID}.execute-api.${AWS::Region}.amazonaws.com" },
+						"OriginPath" : "/api",
+						"CustomOriginConfig" : {
+							"HTTPPort" : "80",
+							"HTTPSPort" : "443",
+							"OriginProtocolPolicy" : "https-only",
+							"OriginSSLProtocols" : ["TLSv1.2"]
+						}
+					},
+					{
+						"Id" : "akamaiSureRouteS3Origin",
+						"DomainName" : { "Fn::Sub" : "${AppName}-${AWS::Region}-${Environment}-olo-content.s3.amazonaws.com" },
+						"S3OriginConfig" : {
+							"OriginAccessIdentity" : { 
+								"Fn::Join": ["/",["origin-access-identity","cloudfront",{"Ref" : "AkamaiOAIForEnv"}]]
+							}
+						}
+					}
+					],
+                    "Enabled" : "true",
+					"Aliases" : [
+									{"Fn::If" : [
+										"IsProd",
+										{"Ref" : "PRODOLOUIDomainName"},
+										{ 
+											"Fn::Join": ["",[{"Ref" : "Environment"},"-",{"Ref" : "OLOUIDomainName"},".",{"Ref" : "RegisteredDomainName"}]]
+										}
+									]}
+								]
+								,
+                    "Comment" : { "Fn::Sub": "${Environment}-${Tenant}-OLOUI" },
+					"DefaultCacheBehavior" : {
+                        "TargetOriginId" : "olouiorigin",
+						"AllowedMethods" : [ "GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE" ],
+                        "SmoothStreaming" : "false",  
+						"CachePolicyId" : {"Ref" : "OLOCachePolicy"},
+						"OriginRequestPolicyId" : {"Ref" : "OLOUIOriginRequestPolicy"},
+                        "ForwardedValues" : {
+                            "QueryString" : "false",
+                            "Cookies" : { "Forward" : "all" }
+                        },
+                        "ViewerProtocolPolicy" : "redirect-to-https",
+						"FunctionAssociations" : [{
+							  "EventType" : "viewer-request",
+							  "FunctionARN" : { "Fn::GetAtt" : [ "OLOUICDNFN", "FunctionARN" ] }
+							}]
+                    },
+                    "CacheBehaviors":[
+					{
+                            "AllowedMethods" : [ "GET", "HEAD", "OPTIONS" ],  
+							"CachedMethods" : [ "GET", "HEAD", "OPTIONS" ],
+                            "TargetOriginId" : "akamaiSureRouteS3Origin",
+                            "ViewerProtocolPolicy" : "https-only",
+							"CachePolicyId" : "658327ea-f89d-4fab-a63d-7e88639e58f6",
+                            "PathPattern" : "akamai/*"
+                        },
+						{
+                            "AllowedMethods" : [ "GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE" ],  
+							"CachedMethods" : [ "GET", "HEAD", "OPTIONS" ],
+                            "TargetOriginId" : "olouiorigin",
+                            "ViewerProtocolPolicy" : "redirect-to-https",
+							"CachePolicyId" : {"Ref" : "OloAuthCachePolicy"},
+							"OriginRequestPolicyId" : {"Ref" : "OLOUIOriginRequestPolicy"},
+                            "PathPattern" : "api/v1/*"
+                        }
+					], 
+                   "ViewerCertificate": { 
+						"SslSupportMethod" : "sni-only",
+						"AcmCertificateArn" : {"Ref": "OLOUISSLcertificateARN"},
+						"MinimumProtocolVersion" : "TLSv1.2_2021"
+				   },
+				   "WebACLId" :  {"Fn::If" : [
+						"EnableWafWebACL",
+						{ 
+							"Fn::Join": [":",["arn:aws:wafv2",{"Ref" : "WafRegion"},{"Ref":"AWS::AccountId"},{"Ref" : "WafWebACLArnName"}]]
+						},
+						{"Ref" : "AWS::NoValue"}
+					]}
+                },
+				"Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-OLOUIDistribution" } }, 
+						{"Key": "AppName", "Value":{ "Fn::Join": ["-",
+										[{"Ref": "AppName"} ,
+										"ui"]]}},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					]
+            }
+        },
+		"OLOUICDNFN" : 
+		{
+		  "Type" : "AWS::CloudFront::Function",
+		  "Properties" : {
+			  "AutoPublish" : true,
+			  "FunctionCode" : "function handler(event) {\n    var request = event.request;\n    var headers = request.headers;\n    if(headers['user-agent']){\n        //var botPattern = \"Googlebot\\\\/|Googlebot|Googlebot-Mobile|Googlebot-Image|Googlebot-News|Googlebot-Video|bingbot\";\n        var botPattern = \"googlebot|Yahoo! Slurp|bingbot|yandex|baiduspider|facebookexternalhit|twitterbot|rogerbot|linkedinbot|embedly|quora link preview|showyoubot|outbrain|slackbot|vkShare|W3C_Validator|redditbot|Applebot|WhatsApp|flipboard|tumblr|bitlybot|SkypeUriPreview|nuzzel|Discordbot|Google Page Speed|Qwantify|pinterestbot|Bitrix link preview|XING-contenttabreceiver|Chrome-Lighthouse|TelegramBot|SeznamBot|pinterest/0.|developers.google.com/+/web/snippet|Google-PageRenderer\";\n        var re = new RegExp(botPattern, 'i');\n        var userAgent = headers['user-agent']['value'];\n        if(re.test(userAgent)){\n            request.headers['x-correlation-session-id'] = {value: userAgent};\n            request.headers['x-correlation-request-id'] = {value: userAgent};\n     request.headers['authorization'] = { value : userAgent}; \n        }\n    }\n    return request;\n}",
+			  "FunctionConfig" : {
+						  "Comment" : "JS code to Resolve Bot generated Page Caching issue",
+						  "Runtime" : "cloudfront-js-1.0"
+						},
+			  "Name" : { "Fn::Sub" : "ordeserv-${Environment}-${Tenant}-OLOUICloudfrontFN"}
+			}
+		}
+    }
+}

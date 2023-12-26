@@ -1,0 +1,181 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description" :  "Stack to create Macro",
+	"Resources": {
+		"VariableSubstitutionsMacro": {
+			"Type": "AWS::CloudFormation::Macro",
+			"DependsOn" : "TransformVariableSubLambda",
+			"Properties": {
+				"Name": "OLOAPIGWVariableSubstitution",
+				"FunctionName": { "Fn::GetAtt" :["TransformVariableSubLambda", "Arn"]}
+			}
+		},
+		"JsonToStringMacro": {
+			"Type": "AWS::CloudFormation::Macro",
+			"DependsOn":"JsonToStringCoverterLambda",
+			"Properties": {
+				"Name": "JsonToStringFromS3Object",
+				"FunctionName": { "Fn::GetAtt" :["JsonToStringCoverterLambda", "Arn"]}
+			}
+		},
+		"TransformVariableSubLambda": {
+			"Type": "AWS::Lambda::Function",
+			"DependsOn" : "TransformVariableSubLambdaRole",
+			"Properties": {
+			    "FunctionName" : "orderserv-cfn-olo-apigw-transform",
+				"Handler": "index.lambda_handler",
+				"MemorySize": 128,
+				"Runtime": "python3.11",
+				"Role": { "Fn::GetAtt" :["TransformVariableSubLambdaRole", "Arn"]},
+				"Timeout": 180,
+				"Code": {
+					"ZipFile": "import json\nfrom datetime import datetime\n\n# Replacement ID to be used in CFN\n#replacement = '$$DYNAMICREPLACEMENTID$$'\nreplacement_token = 'MACRODYNAMICREPLACEMENTID'\n\ndef lambda_handler(event, context):\n    print ('===Started===')\n    print(json.dumps(event))\n\n    # Enable to update the data with replacekey\n    # Replace all replacement_token value with dynamic data\n    fragment = _replace_variable(event['fragment'],event['requestId'])\n    \n    print('===Modified Fragment===')\n    print(fragment)\n    \n    # Update the description on RestApi to make sure latest Swagger Body is picked up by CFN  \n    now = datetime.now() # current date and time\n    date_time = now.strftime(\" %m/%d/%Y %H:%M:%S\")\n   \n    fragment['Resources']['OLOApiGateway']['Properties']['Description'] = fragment['Resources']['OLOApiGateway']['Properties']['Description'] + date_time\n    \n    \n    resp = {\n      'requestId': event['requestId'],\n      'status': 'success',\n      'fragment': fragment\n    }\n    return resp\n\ndef _replace_variable(cfn, requestId):\n    data = {}\n    resources = cfn['Resources']\n    appenderStr = requestId\n    for key in resources.keys():\n        if key.endswith(replacement_token) :\n            partialkey = key[:-len(replacement_token)]\n            data[key] = partialkey+appenderStr.replace('-','')\n            \n    strCFN = json.dumps(cfn)\n    \n    for key in data.keys():\n        print(key)\n        print(data[key])\n        strCFN = strCFN.replace(key, data[key])\n    \n    return json.loads(strCFN)"
+				},
+				"Tags": [
+					{
+					  "Key" : "AppName",
+					  "Value" : "orderserv"
+					},
+					{
+					  "Key" : "Environment",
+					  "Value" : "all"
+					},
+					{
+					  "Key" : "Tenant",
+					  "Value" : "all"
+					}]
+			}
+		},
+		"TransformVariableSubLambdaRole" :{
+			"Type": "AWS::IAM::Role",
+			"Properties": {
+				"AssumeRolePolicyDocument": {
+					"Version": "2012-10-17",
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Principal": {
+								"Service": "lambda.amazonaws.com"
+							},
+							"Action": "sts:AssumeRole"
+						}
+					]
+				},
+				"Path": "/",
+				"Policies": [
+					{
+						"PolicyName": "orderserv-cfn-olo-apigw-transform-Lambda-policy",
+						"PolicyDocument": {
+							"Version": "2012-10-17",
+							"Statement": [
+								{
+									"Effect": "Allow",
+									"Action": [
+										"logs:CreateLogGroup"
+									],
+									"Resource": [
+										{ "Fn::Sub" : "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"}
+									]
+								},
+								{
+									"Effect": "Allow",
+									"Action": [
+										"logs:CreateLogStream",
+										"logs:PutLogEvents"
+									],
+									"Resource": [
+										{ "Fn::Sub" :"arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/orderserv-cfn-olo-apigw-transform:*"}
+									]
+								}
+							]
+						}
+					}
+				]
+			}
+		},
+		"JsonToStringCoverterLambda": {
+			"Type": "AWS::Lambda::Function",
+			"DependsOn" : "JsonToStringCoverterLambdaRole",
+			"Properties": {
+			    "FunctionName" : "orderserv-cfn-s3object-jsontostring-transform",
+				"Handler": "index.lambda_handler",
+				"MemorySize": 128,
+				"Runtime": "python3.11",
+				"Role": { "Fn::GetAtt" :["JsonToStringCoverterLambdaRole", "Arn"]},
+				"Timeout": 180,
+				"Code": {
+					"ZipFile": "import json\r\nimport boto3\r\n\r\ndef lambda_handler(event, context):\r\n    print ('===Started===')\r\n    bucketName = event[\"params\"][\"bucketName\"]\r\n    fileName = event[\"params\"][\"fileName\"]\r\n    s3 = boto3.resource('s3')\r\n    obj = s3.Object(bucketName, fileName)\r\n    body = obj.get()['Body'].read();\r\n    resp = {\r\n      'requestId': event['requestId'],\r\n      'status': 'success',\r\n      'fragment': json.dumps(json.loads(body))\r\n    }\r\n    print(resp);\r\n    return resp"
+				},
+				"Tags": [
+					{
+					  "Key" : "AppName",
+					  "Value" : "orderserv"
+					},
+					{
+					  "Key" : "Environment",
+					  "Value" : "all"
+					},
+					{
+					  "Key" : "Tenant",
+					  "Value" : "all"
+					}]
+			}
+		},
+		"JsonToStringCoverterLambdaRole" :{
+			"Type": "AWS::IAM::Role",
+			"Properties": {
+				"AssumeRolePolicyDocument": {
+					"Version": "2012-10-17",
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Principal": {
+								"Service": "lambda.amazonaws.com"
+							},
+							"Action": "sts:AssumeRole"
+						}
+					]
+				},
+				"Path": "/",
+				"Policies": [
+					{
+						"PolicyName": "orderserv-cfn-s3object-jsontostring-transform-Lambda-policy",
+						"PolicyDocument": {
+							"Version": "2012-10-17",
+							"Statement": [
+								{
+									"Effect": "Allow",
+									"Action": [
+										"logs:CreateLogGroup"
+									],
+									"Resource": [
+										{ "Fn::Sub" : "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"}
+									]
+								},
+								{
+									"Effect": "Allow",
+									"Action": [
+										"logs:CreateLogStream",
+										"logs:PutLogEvents"
+									],
+									"Resource": [
+										{ "Fn::Sub" :"arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/orderserv-cfn-s3object-jsontostring-transform:*"}
+									]
+								},
+								{
+									"Effect": "Allow",
+									"Action": [
+										"s3:GetObject"
+									],
+									"Resource": "*"
+								}
+							]
+						}
+					}
+				]
+			}
+		}
+	
+	}
+	
+}

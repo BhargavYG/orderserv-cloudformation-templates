@@ -1,0 +1,77 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description" :  "Stack to create VPC Flow Log",
+    "Parameters":{
+		"Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"AppName": {
+			"Type": "String",
+			"Default": "order-serv",
+			"Description": "Application Name"
+		},
+		"MasterRolePolicyStackName" :{
+			"Type": "String",
+			"Default": "MasterRolePolicyStack",
+			"Description": "Stack Name for the MasterRolePolicy"			
+		},
+		"VpcId":{
+            "Type":"AWS::EC2::VPC::Id",
+            "Description":"Select the VPC"
+        }
+	},
+	"Resources": {
+		"vpcflowloggroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+                "LogGroupName": {
+                    "Fn::Sub": "orderserv-${Environment}-main-vpc-flowlog"
+                },
+                "RetentionInDays": 14
+            }
+        },
+		"mainvpcflowlog": {
+			  "Type" : "AWS::EC2::FlowLog",
+			  "DependsOn" : "vpcflowloggroup",
+			  "Properties" : {
+				  "DeliverLogsPermissionArn" : { 
+						"Fn::ImportValue": {
+                            "Fn::Sub": "${MasterRolePolicyStackName}-GenericCloudWatchLogsRoleARN"
+                        }
+				  },
+				  "LogDestination" : { "Fn::GetAtt" : ["vpcflowloggroup","Arn"]},
+				  "LogDestinationType" : "cloud-watch-logs",
+				  "MaxAggregationInterval" : 60,
+				  "ResourceId" : {"Ref" : "VpcId"},
+				  "ResourceType" : "VPC",
+				  "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": "orderserv-${Environment}-vpc-flow-log"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+					],
+				  "TrafficType" : "REJECT"
+				}
+			}
+	}
+	
+}

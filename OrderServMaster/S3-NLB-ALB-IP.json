@@ -1,0 +1,66 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "AWS CloudFormation Template for ALB's IP in S3",
+    "Parameters": {
+		"Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"AppName": {
+			"Type": "String",
+			"Default": "order-serv",
+			"Description": "Application Name"
+		}
+    },
+    "Resources": {
+        "S3Bucket": {
+            "Type": "AWS::S3::Bucket",
+			"DeletionPolicy": "Delete",
+            "Properties": {
+                "BucketName": {
+                    "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-nlb-alb-ip"
+                },
+                "AccessControl": "Private",
+				"Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-nlb-alb-ip" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": "all"}
+                ],
+                "PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": true,
+                    "BlockPublicPolicy": true,
+                    "IgnorePublicAcls": true,
+                    "RestrictPublicBuckets": true
+                },
+				"BucketEncryption": { 
+					"ServerSideEncryptionConfiguration": [ 
+					{ 
+						"ServerSideEncryptionByDefault": 
+							{	 
+								"SSEAlgorithm": "AES256" 
+							} 
+						} 
+					] 
+				}
+            }
+        }
+    },
+    "Outputs": {
+        "BucketName": {
+            "Description": "NLB Target IP for ALB bucket",
+            "Value": {
+                "Ref": "S3Bucket"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-BUCKET-NAME"
+                }
+            }
+        }      
+    }
+}

@@ -1,0 +1,624 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "AWS CloudFormation Template for NLB with TargetGroup",
+    "Parameters": {
+        "VPC01": {
+            "Type": "AWS::EC2::VPC::Id",
+            "Description":"Select the VPC"
+        },
+        "PrivateSubnet01": {
+            "Type": "AWS::EC2::Subnet::Id",
+            "Description": "Select a private subnet in AZ-1 in the VPC "
+        },
+        "PrivateSubnet02": {
+            "Type": "AWS::EC2::Subnet::Id",
+            "Description": "Select a private subnet in AZ-2 in the VPC"
+        },
+		"Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"AppName": {
+			"Type": "String",
+			"Default": "order-serv",
+			"Description": "Application Name"
+		}
+    },
+    "Resources": {
+        "BasketNLB": {
+            "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+            "Properties": {
+                "Name": {
+                    "Fn::Sub": "orderserv-${Environment}-basket-nlb"
+                },
+				"LoadBalancerAttributes": [
+					 { "Key" : "deletion_protection.enabled",
+					   "Value" : "false"
+					 }
+				],
+				"Type": "network",
+				"Scheme": "internal",
+                "Subnets": [
+                    {"Ref": "PrivateSubnet01"},
+                    {"Ref": "PrivateSubnet02"}
+                ],
+               "Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-basket-nlb" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": "all" }
+					] 
+				}
+         },
+		 "OrderNLB": {
+            "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+            "Properties": {
+                "Name": {
+                    "Fn::Sub": "orderserv-${Environment}-order-nlb"
+                },
+				"LoadBalancerAttributes": [
+					 { "Key" : "deletion_protection.enabled",
+					   "Value" : "false"
+					 }
+				],
+				"Type": "network",
+				"Scheme": "internal",
+                "Subnets": [
+                    {"Ref": "PrivateSubnet01"},
+                    {"Ref": "PrivateSubnet02"}
+                ],
+               "Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-order-nlb" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": "all" }
+					] 
+				}
+         },
+		 "StoreNLB": {
+            "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+            "Properties": {
+                "Name": {
+                    "Fn::Sub": "orderserv-${Environment}-store-nlb"
+                },
+				"LoadBalancerAttributes": [
+					 { "Key" : "deletion_protection.enabled",
+					   "Value" : "false"
+					 }
+				],
+				"Type": "network",
+				"Scheme": "internal",
+                "Subnets": [
+                    {"Ref": "PrivateSubnet01"},
+                    {"Ref": "PrivateSubnet02"}
+                ],
+               "Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-store-nlb" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": "all" }
+					] 
+				}
+         },
+		 "CustomerNLB": {
+            "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+            "Properties": {
+                "Name": {
+                    "Fn::Sub": "orderserv-${Environment}-customer-nlb"
+                },
+				"LoadBalancerAttributes": [
+					 { "Key" : "deletion_protection.enabled",
+					   "Value" : "false"
+					 }
+				],
+				"Type": "network",
+				"Scheme": "internal",
+                "Subnets": [
+                    {"Ref": "PrivateSubnet01"},
+                    {"Ref": "PrivateSubnet02"}
+                ],
+               "Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-customer-nlb" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": "all" }
+					] 
+				}
+         },
+		 "PaymentNLB": {
+            "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+            "Properties": {
+                "Name": {
+                    "Fn::Sub": "orderserv-${Environment}-payment-nlb"
+                },
+				"LoadBalancerAttributes": [
+					 { "Key" : "deletion_protection.enabled",
+					   "Value" : "false"
+					 }
+				],
+				"Type": "network",
+				"Scheme": "internal",
+                "Subnets": [
+                    {"Ref": "PrivateSubnet01"},
+                    {"Ref": "PrivateSubnet02"}
+                ],
+               "Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-payment-nlb" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": "all" }
+					] 
+				}
+         },
+		 "MenuPromotionNLB": {
+            "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+            "Properties": {
+                "Name": {
+                    "Fn::Sub": "orderserv-${Environment}-menupromtn-nlb"
+                },
+				"LoadBalancerAttributes": [
+					 { "Key" : "deletion_protection.enabled",
+					   "Value" : "false"
+					 }
+				],
+				"Type": "network",
+				"Scheme": "internal",
+                "Subnets": [
+                    {"Ref": "PrivateSubnet01"},
+                    {"Ref": "PrivateSubnet02"}
+                ],
+               "Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-menupromtn-nlb" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": "all" }
+					] 
+				}
+         },
+        "BasketNLBTargetGroup": {
+            "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+            "Properties": {
+                "HealthCheckIntervalSeconds": 30,
+                "HealthCheckProtocol": "TCP",
+                "HealthCheckTimeoutSeconds": 10,
+                "HealthyThresholdCount": 3,
+                "UnhealthyThresholdCount": 3,
+                "Name": {
+                    "Fn::Sub": "orderserv-${Environment}-basket-nlb-tg"
+                },
+                "Protocol": "TCP",
+                "TargetType": "ip",
+				"Port": 80,
+                "VpcId": {
+                    "Ref": "VPC01"
+                },
+                "Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-basket-nlb-tg" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": "all"}
+				] 
+			}
+        },
+		"OrderNLBTargetGroup": {
+            "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+            "Properties": {
+                "HealthCheckIntervalSeconds": 30,
+                "HealthCheckProtocol": "TCP",
+                "HealthCheckTimeoutSeconds": 10,
+                "HealthyThresholdCount": 3,
+                "UnhealthyThresholdCount": 3,
+                "Name": {
+                    "Fn::Sub": "orderserv-${Environment}-order-nlb-tg"
+                },
+                "Protocol": "TCP",
+                "TargetType": "ip",
+				"Port": 80,
+                "VpcId": {
+                    "Ref": "VPC01"
+                },
+                "Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-order-nlb-tg" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": "all"}
+				] 
+			}
+        },
+		"StoreNLBTargetGroup": {
+            "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+            "Properties": {
+                "HealthCheckIntervalSeconds": 30,
+                "HealthCheckProtocol": "TCP",
+                "HealthCheckTimeoutSeconds": 10,
+                "HealthyThresholdCount": 3,
+                "UnhealthyThresholdCount": 3,
+                "Name": {
+                    "Fn::Sub": "orderserv-${Environment}-store-nlb-tg"
+                },
+                "Protocol": "TCP",
+                "TargetType": "ip",
+				"Port": 80,
+                "VpcId": {
+                    "Ref": "VPC01"
+                },
+                "Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-store-nlb-tg" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": "all"}
+				] 
+			}
+        },
+		"PaymentNLBTargetGroup": {
+            "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+            "Properties": {
+                "HealthCheckIntervalSeconds": 30,
+                "HealthCheckProtocol": "TCP",
+                "HealthCheckTimeoutSeconds": 10,
+                "HealthyThresholdCount": 3,
+                "UnhealthyThresholdCount": 3,
+                "Name": {
+                    "Fn::Sub": "orderserv-${Environment}-payment-nlb-tg"
+                },
+                "Protocol": "TCP",
+                "TargetType": "ip",
+				"Port": 80,
+                "VpcId": {
+                    "Ref": "VPC01"
+                },
+                "Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-payment-nlb-tg" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": "all"}
+				] 
+			}
+        },
+		"CustomerNLBTargetGroup": {
+            "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+            "Properties": {
+                "HealthCheckIntervalSeconds": 30,
+                "HealthCheckProtocol": "TCP",
+                "HealthCheckTimeoutSeconds": 10,
+                "HealthyThresholdCount": 3,
+                "UnhealthyThresholdCount": 3,
+                "Name": {
+                    "Fn::Sub": "orderserv-${Environment}-customer-nlb-tg"
+                },
+                "Protocol": "TCP",
+                "TargetType": "ip",
+				"Port": 80,
+                "VpcId": {
+                    "Ref": "VPC01"
+                },
+                "Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-customer-nlb-tg" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": "all"}
+				] 
+			}
+        },
+		"MenuPromotionNLBTargetGroup": {
+            "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+            "Properties": {
+                "HealthCheckIntervalSeconds": 30,
+                "HealthCheckProtocol": "TCP",
+                "HealthCheckTimeoutSeconds": 10,
+                "HealthyThresholdCount": 3,
+                "UnhealthyThresholdCount": 3,
+                "Name": {
+                    "Fn::Sub": "orderserv-${Environment}-menupromo-nlb-tg"
+                },
+                "Protocol": "TCP",
+                "TargetType": "ip",
+				"Port": 80,
+                "VpcId": {
+                    "Ref": "VPC01"
+                },
+                "Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-menupromo-nlb-tg" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": "all"}
+				] 
+			}
+        },
+        "BasketNLBListener" :{
+            "Type": "AWS::ElasticLoadBalancingV2::Listener",
+			"DependsOn" : ["BasketNLB","BasketNLBTargetGroup"],
+            "Properties": {
+                "DefaultActions": [{
+                    "Type": "forward",
+                    "TargetGroupArn": {
+                        "Ref": "BasketNLBTargetGroup"
+                    }
+                }],
+                "LoadBalancerArn": {
+                    "Ref": "BasketNLB"
+                },
+                "Port": "80",
+                "Protocol": "TCP"
+            }
+        },
+		"OrderNLBListener" :{
+            "Type": "AWS::ElasticLoadBalancingV2::Listener",
+			"DependsOn": ["OrderNLB","OrderNLBTargetGroup"],
+            "Properties": {
+                "DefaultActions": [{
+                    "Type": "forward",
+                    "TargetGroupArn": {
+                        "Ref": "OrderNLBTargetGroup"
+                    }
+                }],
+                "LoadBalancerArn": {
+                    "Ref": "OrderNLB"
+                },
+                "Port": "80",
+                "Protocol": "TCP"
+            }
+        },
+		"CustomerNLBListener" :{
+            "Type": "AWS::ElasticLoadBalancingV2::Listener",
+			"DependsOn": ["CustomerNLB","CustomerNLBTargetGroup"],
+            "Properties": {
+                "DefaultActions": [{
+                    "Type": "forward",
+                    "TargetGroupArn": {
+                        "Ref": "CustomerNLBTargetGroup"
+                    }
+                }],
+                "LoadBalancerArn": {
+                    "Ref": "CustomerNLB"
+                },
+                "Port": "80",
+                "Protocol": "TCP"
+            }
+        },
+		"StoreNLBListener" :{
+            "Type": "AWS::ElasticLoadBalancingV2::Listener",
+			"DependsOn": ["StoreNLB","StoreNLBTargetGroup"],
+            "Properties": {
+                "DefaultActions": [{
+                    "Type": "forward",
+                    "TargetGroupArn": {
+                        "Ref": "StoreNLBTargetGroup"
+                    }
+                }],
+                "LoadBalancerArn": {
+                    "Ref": "StoreNLB"
+                },
+                "Port": "80",
+                "Protocol": "TCP"
+            }
+        },
+		"PaymentNLBListener" :{
+            "Type": "AWS::ElasticLoadBalancingV2::Listener",
+			"DependsOn": ["PaymentNLB","PaymentNLBTargetGroup"],
+            "Properties": {
+                "DefaultActions": [{
+                    "Type": "forward",
+                    "TargetGroupArn": {
+                        "Ref": "PaymentNLBTargetGroup"
+                    }
+                }],
+                "LoadBalancerArn": {
+                    "Ref": "PaymentNLB"
+                },
+                "Port": "80",
+                "Protocol": "TCP"
+            }
+        },
+		"MenuPromotionNLBListener" :{
+            "Type": "AWS::ElasticLoadBalancingV2::Listener",
+			"DependsOn": ["MenuPromotionNLB","MenuPromotionNLBTargetGroup"],
+            "Properties": {
+                "DefaultActions": [{
+                    "Type": "forward",
+                    "TargetGroupArn": {
+                        "Ref": "MenuPromotionNLBTargetGroup"
+                    }
+                }],
+                "LoadBalancerArn": {
+                    "Ref": "MenuPromotionNLB"
+                },
+                "Port": "80",
+                "Protocol": "TCP"
+            }
+        }
+    },
+    "Outputs": {
+        "BasketNLBTargetGroupOutput": {
+            "Description": "BasketNLBTargetGroup",
+            "Value": {
+                "Ref": "BasketNLBTargetGroup"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-BasketNLBTargetGroup"
+                }
+            }
+        },
+        "BasketNLB": {
+            "Description": "BasketNLB ARN Used in API gateway VPC Link",
+            "Value": {
+                "Ref": "BasketNLB"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-BasketNLB"
+                }
+            }
+        },
+        "BasketNLBDNS": {
+            "Description": "BasketNLB DNS Used in API gateway URLs",
+            "Value": { "Fn::GetAtt": ["BasketNLB","DNSName"] },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-BasketNLBDNS"
+                }
+            }
+        },
+		"OrderNLBTargetGroupOutput": {
+            "Description": "OrderNLBTargetGroup",
+            "Value": {
+                "Ref": "OrderNLBTargetGroup"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-OrderNLBTargetGroup"
+                }
+            }
+        },
+        "OrderNLB": {
+            "Description": "OrderNLB ARN Used in API gateway VPC Link",
+            "Value": {
+                "Ref": "OrderNLB"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-OrderNLB"
+                }
+            }
+        },
+        "OrderNLBDNS": {
+            "Description": "OrderNLB DNS Used in API gateway URLs",
+            "Value": { "Fn::GetAtt": ["OrderNLB","DNSName"] },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-OrderNLBDNS"
+                }
+            }
+        },
+		"PaymentNLBTargetGroupOutput": {
+            "Description": "PaymentNLBTargetGroup",
+            "Value": {
+                "Ref": "PaymentNLBTargetGroup"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-PaymentNLBTargetGroup"
+                }
+            }
+        },
+        "PaymentNLB": {
+            "Description": "PaymentNLB ARN Used in API gateway VPC Link",
+            "Value": {
+                "Ref": "PaymentNLB"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-PaymentNLB"
+                }
+            }
+        },
+        "PaymentNLBDNS": {
+            "Description": "PaymentNLB DNS Used in API gateway URLs",
+            "Value": { "Fn::GetAtt": ["PaymentNLB","DNSName"] },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-PaymentNLBDNS"
+                }
+            }
+        },
+		"CustomerNLBTargetGroupOutput": {
+            "Description": "CustomerNLBTargetGroup",
+            "Value": {
+                "Ref": "CustomerNLBTargetGroup"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-CustomerNLBTargetGroup"
+                }
+            }
+        },
+        "CustomerNLB": {
+            "Description": "CustomerNLB ARN Used in API gateway VPC Link",
+            "Value": {
+                "Ref": "CustomerNLB"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-CustomerNLB"
+                }
+            }
+        },
+        "CustomerNLBDNS": {
+            "Description": "CustomerNLB DNS Used in API gateway URLs",
+            "Value": { "Fn::GetAtt": ["CustomerNLB","DNSName"] },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-CustomerNLBDNS"
+                }
+            }
+        },
+		"StoreNLBTargetGroupOutput": {
+            "Description": "StoreNLBTargetGroup",
+            "Value": {
+                "Ref": "StoreNLBTargetGroup"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-StoreNLBTargetGroup"
+                }
+            }
+        },
+        "StoreNLB": {
+            "Description": "StoreNLB ARN Used in API gateway VPC Link",
+            "Value": {
+                "Ref": "StoreNLB"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-StoreNLB"
+                }
+            }
+        },
+        "StoreNLBDNS": {
+            "Description": "StoreNLB DNS Used in API gateway URLs",
+            "Value": { "Fn::GetAtt": ["StoreNLB","DNSName"] },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-StoreNLBDNS"
+                }
+            }
+        },
+		"MenuPromotionNLBTargetGroupOutput": {
+            "Description": "MenuPromotionNLBTargetGroup",
+            "Value": {
+                "Ref": "MenuPromotionNLBTargetGroup"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-MenuPromotionNLBTargetGroup"
+                }
+            }
+        },
+        "MenuPromotionNLB": {
+            "Description": "MenuPromotionNLB ARN Used in API gateway VPC Link",
+            "Value": {
+                "Ref": "MenuPromotionNLB"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-MenuPromotionNLB"
+                }
+            }
+        },
+        "MenuPromotionNLBDNS": {
+            "Description": "MenuPromotionNLB DNS Used in API gateway URLs",
+            "Value": { "Fn::GetAtt": ["MenuPromotionNLB","DNSName"] },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-MenuPromotionNLBDNS"
+                }
+            }
+        }  
+    
+    }
+}

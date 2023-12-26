@@ -1,0 +1,633 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "AWS CloudFormation Master Template for OrderServ",
+	"Parameters": {
+		"Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"AppName": {
+			"Type": "String",
+			"Default": "order-serv",
+			"Description": "Application Name"
+		},
+		"NestStackBucketName": {
+			"Type": "String",
+			"Default": "orderserv-cloudformation-stack-bucket",
+			"Description": "Name of the S3 bucket where Nest CFTs and Lambda zip files are placed"
+		},
+		"NestStackBucketNameENVPrefix": {
+			"Type": "String",
+			"Default": "DEV",
+			"Description": "Enter the Name of ENV as PROD",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"VpcCIDR": {
+			"Description": "Please enter the IP range (CIDR notation) for this VPC",
+			"Type": "String",
+			"Default": "10.0.0.0/16"
+		},
+		"PublicSubnet1CIDR": {
+			"Description": "Please enter the IP range (CIDR notation) for the public subnet in the first Availability Zone",
+			"Type": "String",
+			"Default": "10.0.1.0/24"
+		},
+		"PublicSubnet2CIDR": {
+			"Description": "Please enter the IP range (CIDR notation) for the public subnet in the second Availability Zone",
+			"Type": "String",
+			"Default": "10.0.2.0/24"
+		},
+		"PrivateAppSubnet1CIDR": {
+			"Description": "Please enter the IP range (CIDR notation) for the private subnet in the first Availability Zone",
+			"Type": "String",
+			"Default": "10.0.3.0/24"
+		},
+		"PrivateAppSubnet2CIDR": {
+			"Description": "Please enter the IP range (CIDR notation) for the private subnet in the second Availability Zone",
+			"Type": "String",
+			"Default": "10.0.4.0/24"
+		},
+        "PrivateDBSubnet1CIDR": {
+            "Description": "Please enter the IP range (CIDR notation) for the private subnet in the first Availability Zone",
+            "Type": "String",
+            "Default": "10.0.5.0/24"
+        },
+        "PrivateDBSubnet2CIDR": {
+            "Description": "Please enter the IP range (CIDR notation) for the private subnet in the second Availability Zone",
+            "Type": "String",
+            "Default": "10.0.6.0/24"
+        },
+		"MasterRolePolicyStackName" :{
+			"Type": "String",
+			"Default": "MasterRolePolicyStack",
+			"Description": "Stack Name for the MasterRolePolicy"
+		}	
+		
+	},
+	"Resources": {
+		"ORDERSERVVPCSUBNET": {
+			"Type": "AWS::CloudFormation::Stack",
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/OrderServMaster/VPC-Subnet.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters": {
+					"Environment": {
+						"Ref": "Environment"
+					},
+					"VpcCIDR": {
+						"Ref": "VpcCIDR"
+					},
+					"PublicSubnet1CIDR": {
+						"Ref": "PublicSubnet1CIDR"
+					},
+					"PublicSubnet2CIDR": {
+						"Ref": "PublicSubnet2CIDR"
+					},
+					"PrivateAppSubnet1CIDR": {
+						"Ref": "PrivateAppSubnet1CIDR"
+					},
+					"PrivateAppSubnet2CIDR": {
+						"Ref": "PrivateAppSubnet2CIDR"
+					},
+					"PrivateDBSubnet1CIDR": {
+						"Ref": "PrivateDBSubnet1CIDR"
+					},
+					"PrivateDBSubnet2CIDR": {
+						"Ref": "PrivateDBSubnet2CIDR"
+					},
+					"AppName": {
+						"Ref": "AppName"
+					}
+				}
+			}
+		},		
+		"ORDERSERVVPCENDPOINT": {
+			"Type": "AWS::CloudFormation::Stack",
+			"DependsOn": [
+				"ORDERSERVVPCSUBNET","ORDERSERVALBSG"
+			],
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/OrderServMaster/VPCEndPoints.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters": {
+					"PrivateRouteTable01": {
+						"Fn::GetAtt": [
+							"ORDERSERVVPCSUBNET",
+							"Outputs.PrivateRouteTable1"
+						]
+					},
+					"PrivateRouteTable02": {
+						"Fn::GetAtt": [
+							"ORDERSERVVPCSUBNET",
+							"Outputs.PrivateRouteTable2"
+						]
+					},
+					"AppSubnet01": {
+						"Fn::GetAtt": [
+							"ORDERSERVVPCSUBNET",
+							"Outputs.PrivateAppSubnet1"
+						]
+					},
+					"AppSubnet02": {
+						"Fn::GetAtt": [
+							"ORDERSERVVPCSUBNET",
+							"Outputs.PrivateAppSubnet2"
+						]
+					},
+					"VPCESecurityGroup":{
+						"Fn::GetAtt": [
+							"ORDERSERVALBSG",
+							"Outputs.VPCEndpointSecurityGroup"
+						]
+					},
+					"VPC01": {
+						"Fn::GetAtt": [
+							"ORDERSERVVPCSUBNET",
+							"Outputs.VPC01"
+						]
+					}
+				}
+			}
+		},
+		"ORDERSERVVPCFLOWLOG": {
+			"Type": "AWS::CloudFormation::Stack",
+			"DependsOn": [
+				"ORDERSERVVPCSUBNET"
+			],
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/OrderServMaster/VPC_Flow_Log.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters": {
+					"Environment": {
+						"Ref": "Environment"
+					},
+					"AppName": {
+						"Ref": "AppName"
+					},
+					"MasterRolePolicyStackName" :{
+						"Ref" : "MasterRolePolicyStackName"
+					},
+					"VpcId": {
+						"Fn::GetAtt": [
+							"ORDERSERVVPCSUBNET",
+							"Outputs.VPC01"
+						]
+					}
+				}
+			}
+		},
+		"ORDERSERVMasterS3": {
+			"Type": "AWS::CloudFormation::Stack",
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/OrderServMaster/S3-OrderServ_Master.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters" : {
+                "Environment" : { "Ref": "Environment" },
+				"AppName" : { "Ref": "AppName" }
+               }
+            }
+        },
+		"ORDERSERVMasterSNS": {
+			"Type": "AWS::CloudFormation::Stack",
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/OrderServMaster/master_sns_topic.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters" : {
+                "Environment" : { "Ref": "Environment" },
+				"AppName" : { "Ref": "AppName" }
+               }
+            }
+        },
+		"ORDERSERVALBSG": {
+			"Type": "AWS::CloudFormation::Stack",
+			"DependsOn" : "ORDERSERVVPCSUBNET",
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/OrderServMaster/ALB-SG.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters": {
+					"VpcId": { "Fn::GetAtt" : [ "ORDERSERVVPCSUBNET", "Outputs.VPC01" ] },
+					"Environment": {
+						"Ref": "Environment"
+					},
+					"AppName": {
+						"Ref": "AppName"
+					}
+				}
+			}
+		},
+		"ORDERSERVALB": {
+			"Type": "AWS::CloudFormation::Stack",
+			"DependsOn": [
+				"ORDERSERVALBSG","ORDERSERVVPCSUBNET"
+			],
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/OrderServMaster/ALB-with-TG.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters": {
+					"ALBSecGroup": {
+						"Fn::GetAtt": [
+							"ORDERSERVALBSG",
+							"Outputs.ALBSecurityGroup"
+						]
+					},
+					"PrivateSubnet01": {
+						"Fn::GetAtt" : [ "ORDERSERVVPCSUBNET", "Outputs.PrivateAppSubnet1" ]
+					},
+					"PrivateSubnet02": {
+						"Fn::GetAtt" : [ "ORDERSERVVPCSUBNET", "Outputs.PrivateAppSubnet2" ]
+					},
+					"VPC01": { "Fn::GetAtt" : [ "ORDERSERVVPCSUBNET", "Outputs.VPC01" ]},
+					"Environment": {
+						"Ref": "Environment"
+					},
+					"AppName": {
+						"Ref": "AppName"
+					}
+				}
+			}
+		},
+		"ORDERSERVNLB": {
+			"Type": "AWS::CloudFormation::Stack",
+			"DependsOn" : "ORDERSERVVPCSUBNET",
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/OrderServMaster/NLB-with-TG.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters": {
+					"PrivateSubnet01": {
+						"Fn::GetAtt" : [ "ORDERSERVVPCSUBNET", "Outputs.PrivateAppSubnet1" ]
+					},
+					"PrivateSubnet02": {
+						"Fn::GetAtt" : [ "ORDERSERVVPCSUBNET", "Outputs.PrivateAppSubnet2" ]
+					},
+					"VPC01": { "Fn::GetAtt" : [ "ORDERSERVVPCSUBNET", "Outputs.VPC01" ]},
+					"Environment": {
+						"Ref": "Environment"
+					},
+					"AppName": {
+						"Ref": "AppName"
+					}
+				}
+			}
+		},
+		"ORDERSERVIPS3BUCKET" : {
+           "Type" : "AWS::CloudFormation::Stack",
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/OrderServMaster/S3-NLB-ALB-IP.json"},  
+              "TimeoutInMinutes" : "60",
+              "Parameters" : {
+                "Environment" : { "Ref": "Environment" },
+				"AppName" : { "Ref": "AppName" }               
+               }
+            }
+        },
+		"ORDERSERVLAMBDA" : {
+           "Type" : "AWS::CloudFormation::Stack",
+           "DependsOn": [ "ORDERSERVALB", "ORDERSERVNLB","ORDERSERVALBSG","ORDERSERVIPS3BUCKET" ],
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/OrderServMaster/lambda.json"},  
+              "TimeoutInMinutes" : "60",
+              "Parameters" : {
+                "LAMBDABUCKET" : { "Ref": "NestStackBucketName" },
+                "basketALBDNSNAME": { "Fn::GetAtt" : [ "ORDERSERVALB", "Outputs.basketalbDNSName" ] },
+                "basketNLBTGARN": { "Fn::GetAtt" : [ "ORDERSERVNLB", "Outputs.BasketNLBTargetGroupOutput" ] },
+				"orderALBDNSNAME": { "Fn::GetAtt" : [ "ORDERSERVALB", "Outputs.orderalbDNSName" ] },
+                "orderNLBTGARN": { "Fn::GetAtt" : [ "ORDERSERVNLB", "Outputs.OrderNLBTargetGroupOutput" ] },
+				"storeALBDNSNAME": { "Fn::GetAtt" : [ "ORDERSERVALB", "Outputs.storealbDNSName" ] },
+                "storeNLBTGARN": { "Fn::GetAtt" : [ "ORDERSERVNLB", "Outputs.StoreNLBTargetGroupOutput" ] },
+				"paymentALBDNSNAME": { "Fn::GetAtt" : [ "ORDERSERVALB", "Outputs.paymentalbDNSName" ] },
+                "paymentNLBTGARN": { "Fn::GetAtt" : [ "ORDERSERVNLB", "Outputs.PaymentNLBTargetGroupOutput" ] },
+				"customerALBDNSNAME": { "Fn::GetAtt" : [ "ORDERSERVALB", "Outputs.customeralbDNSName" ] },
+                "customerNLBTGARN": { "Fn::GetAtt" : [ "ORDERSERVNLB", "Outputs.CustomerNLBTargetGroupOutput" ] },
+				"menupromotionALBDNSNAME": { "Fn::GetAtt" : [ "ORDERSERVALB", "Outputs.menupromotionalbDNSName" ] },
+                "menupromotionNLBTGARN": { "Fn::GetAtt" : [ "ORDERSERVNLB", "Outputs.MenuPromotionNLBTargetGroupOutput" ] },
+                "S3BUCKET": { "Fn::GetAtt" : [ "ORDERSERVIPS3BUCKET", "Outputs.BucketName" ] },
+                "Environment" : { "Ref": "Environment" },
+				"SecurityGroup" :   { "Fn::GetAtt" : [ "ORDERSERVALBSG", "Outputs.ALBSecurityGroup" ] },
+				"SubnetId01" :{ "Fn::GetAtt" : [ "ORDERSERVVPCSUBNET", "Outputs.PrivateAppSubnet1" ] },
+				"SubnetId02":{ "Fn::GetAtt" : [ "ORDERSERVVPCSUBNET", "Outputs.PrivateAppSubnet2" ] },
+				"NestStackBucketNameENVPrefix" : { "Ref" : "NestStackBucketNameENVPrefix" },
+				"AppName" : { "Ref": "AppName" },
+                "LAMBDAROLEARN": {
+						"Fn::ImportValue": {
+                            "Fn::Sub": "${MasterRolePolicyStackName}-NLBALBLambdaRoleARN"
+							}
+						}
+               }
+			}
+        },
+		"ORDERSERVVPCLINK": {
+			"Type": "AWS::CloudFormation::Stack",
+			"DependsOn": [
+				"ORDERSERVNLB"
+			],
+			"Properties": {
+				"TemplateURL": {
+					"Fn::Sub": "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/OrderServMaster/VPCLink.json"
+				},
+				"TimeoutInMinutes": "60",
+				"Parameters": {
+					"basketNlbARN": {
+						"Fn::GetAtt": [
+							"ORDERSERVNLB",
+							"Outputs.BasketNLB"
+						]
+					},
+					"orderNlbARN": {
+						"Fn::GetAtt": [
+							"ORDERSERVNLB",
+							"Outputs.OrderNLB"
+						]
+					},
+					"customerNlbARN": {
+						"Fn::GetAtt": [
+							"ORDERSERVNLB",
+							"Outputs.CustomerNLB"
+						]
+					},
+					"storeNlbARN": {
+						"Fn::GetAtt": [
+							"ORDERSERVNLB",
+							"Outputs.StoreNLB"
+						]
+					},
+					"paymentNlbARN": {
+						"Fn::GetAtt": [
+							"ORDERSERVNLB",
+							"Outputs.PaymentNLB"
+						]
+					},
+					"menupromotionNlbARN": {
+						"Fn::GetAtt": [
+							"ORDERSERVNLB",
+							"Outputs.MenuPromotionNLB"
+						]
+					},
+					"Environment": {
+						"Ref": "Environment"
+					}
+				}
+			}
+		}
+	},
+		
+    "Outputs": {
+       "VPC01": {
+				"Value" : { "Fn::GetAtt" : [ "ORDERSERVVPCSUBNET", "Outputs.VPC01" ] },
+				"Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-VPC01"
+                }
+            }
+			},
+		"PrivateAppSubnet1": {
+				"Value" : { "Fn::GetAtt" : [ "ORDERSERVVPCSUBNET", "Outputs.PrivateAppSubnet1" ] },
+				"Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-PrivateAppSubnet1"
+                }
+            }
+		},
+		"PrivateAppSubnet2": {
+				"Value" : { "Fn::GetAtt" : [ "ORDERSERVVPCSUBNET", "Outputs.PrivateAppSubnet2" ] },
+				"Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-PrivateAppSubnet2"
+                }
+            }
+		},
+		"basketvpclink": {
+				"Value" : { "Fn::GetAtt" : [ "ORDERSERVVPCLINK", "Outputs.basketvpclink" ] },
+				"Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-basketvpclink"
+                }
+            }
+		},
+		"BasketNLBDNS": {
+				"Value" : { "Fn::GetAtt" : [ "ORDERSERVNLB", "Outputs.BasketNLBDNS" ] },
+				"Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-BasketNLBDNS"
+                }
+            }
+		},
+		"basketalbListenerOutput": {
+				"Value" : { "Fn::GetAtt" : [ "ORDERSERVALB", "Outputs.basketalbListenerOutput" ] },
+				"Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-basketalbListenerOutput"
+                }
+            }
+		},
+		"ordervpclink": {
+				"Value" : { "Fn::GetAtt" : [ "ORDERSERVVPCLINK", "Outputs.ordervpclink" ] },
+				"Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-ordervpclink"
+                }
+            }
+		},
+		"OrderNLBDNS": {
+				"Value" : { "Fn::GetAtt" : [ "ORDERSERVNLB", "Outputs.OrderNLBDNS" ] },
+				"Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-OrderNLBDNS"
+                }
+            }
+		},
+		"orderalbListenerOutput": {
+				"Value" : { "Fn::GetAtt" : [ "ORDERSERVALB", "Outputs.orderalbListenerOutput" ] },
+				"Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderalbListenerOutput"
+                }
+            }
+		},
+		"customervpclink": {
+				"Value" : { "Fn::GetAtt" : [ "ORDERSERVVPCLINK", "Outputs.customervpclink" ] },
+				"Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-customervpclink"
+                }
+            }
+		},
+		"CustomerNLBDNS": {
+				"Value" : { "Fn::GetAtt" : [ "ORDERSERVNLB", "Outputs.CustomerNLBDNS" ] },
+				"Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-CustomerNLBDNS"
+                }
+            }
+		},
+		"customeralbListenerOutput": {
+				"Value" : { "Fn::GetAtt" : [ "ORDERSERVALB", "Outputs.customeralbListenerOutput" ] },
+				"Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-customeralbListenerOutput"
+                }
+            }
+		},
+		"storevpclink": {
+				"Value" : { "Fn::GetAtt" : [ "ORDERSERVVPCLINK", "Outputs.storevpclink" ] },
+				"Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-storevpclink"
+                }
+            }
+		},
+		"StoreNLBDNS": {
+				"Value" : { "Fn::GetAtt" : [ "ORDERSERVNLB", "Outputs.StoreNLBDNS" ] },
+				"Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-StoreNLBDNS"
+                }
+            }
+		},
+		"storealbListenerOutput": {
+				"Value" : { "Fn::GetAtt" : [ "ORDERSERVALB", "Outputs.storealbListenerOutput" ] },
+				"Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-storealbListenerOutput"
+                }
+            }
+		},
+		"paymentvpclink": {
+				"Value" : { "Fn::GetAtt" : [ "ORDERSERVVPCLINK", "Outputs.paymentvpclink" ] },
+				"Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-paymentvpclink"
+                }
+            }
+		},
+		"PaymentNLBDNS": {
+				"Value" : { "Fn::GetAtt" : [ "ORDERSERVNLB", "Outputs.PaymentNLBDNS" ] },
+				"Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-PaymentNLBDNS"
+                }
+            }
+		},
+		"paymentalbListenerOutput": {
+				"Value" : { "Fn::GetAtt" : [ "ORDERSERVALB", "Outputs.paymentalbListenerOutput" ] },
+				"Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-paymentalbListenerOutput"
+                }
+            }
+		},
+		"menupromotionvpclink": {
+				"Value" : { "Fn::GetAtt" : [ "ORDERSERVVPCLINK", "Outputs.menupromotionvpclink" ] },
+				"Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-menupromotionvpclink"
+                }
+            }
+		},
+		"MenuPromotionNLBDNS": {
+				"Value" : { "Fn::GetAtt" : [ "ORDERSERVNLB", "Outputs.MenuPromotionNLBDNS" ] },
+				"Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-MenuPromotionNLBDNS"
+                }
+            }
+		},
+		"menupromotionalbListenerOutput": {
+				"Value" : { "Fn::GetAtt" : [ "ORDERSERVALB", "Outputs.menupromotionalbListenerOutput" ] },
+				"Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-menupromotionalbListenerOutput"
+                }
+            }
+		}
+    },
+	"Metadata": {
+		"AWS::CloudFormation::Interface": {
+			"ParameterGroups": [
+				{
+					"Label": {
+						"default": "S3 Bucket for Nested CFTs"
+					},
+					"Parameters": [
+						"NestStackBucketName"
+					]
+				},
+				{
+					"Label": {
+						"default": "Environment and Tagging"
+					},
+					"Parameters": [
+						"Environment",
+						"NestStackBucketNameENVPrefix"
+					]
+				},
+				{
+					"Label": {
+						"default": "Network - VPC and Subnets ( 1 VPC, 4 Private(2 App & 2 DB) and 2 Public Subnets )"
+					},
+					"Parameters": [
+						"VpcCIDR",
+						"PublicSubnet1CIDR",
+						"PublicSubnet2CIDR",
+						"PrivateAppSubnet1CIDR",
+						"PrivateAppSubnet2CIDR",
+						"PrivateDBSubnet1CIDR",
+						"PrivateDBSubnet2CIDR"
+					]
+				}
+			],
+			"ParameterLabels": {
+				"Environment": {
+					"default": "Environment Name for Resource Names and Tagging"
+				},
+				"NestStackBucketNameENVPrefix": {
+					"default": "Environment Name bucket"
+				},
+				"VpcCIDR": {
+					"default": "VPC CIDR"
+				},
+				"PublicSubnet1CIDR": {
+					"default": "First Public Subnet in VPC"
+				},
+				"PublicSubnet2CIDR": {
+					"default": "Second Public Subnet in VPC"
+				},
+				"PrivateAppSubnet1CIDR": {
+					"default": "First Private Subnet in VPC"
+				},
+				"PrivateAppSubnet2CIDR": {
+					"default": "Second Private Subnet in VPC"
+				},
+				"NestStackBucketName": {
+					"default": "S3 Bucket which contains all Nest CFTs. and zip files for 3 Lambda functions. The CFTs must be in a folder named NestCFTs . Parameter CFTs are in a further Nested folder called parameters"
+				},
+				"PrivateDBSubnet1CIDR": {
+					"default": "First DB Subnet"
+				},
+				"PrivateDBSubnet2CIDR": {
+					"default": "Second DB Subnet"
+				}
+			}
+		}
+	}
+}

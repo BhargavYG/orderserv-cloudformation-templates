@@ -1,0 +1,77 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "AWS CloudFormation Template for Service Target Groups",
+    "Parameters":{
+        "VpcId":{
+			"Type":"AWS::EC2::VPC::Id",
+			"Description":"Select the VPC"
+        },
+        "Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/pen/uat1",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"Tenant": {
+			"Type": "String",
+			"Description": "Enter the tenant/country key",
+			"Default": "os-kfc-in",
+			"MaxLength": 9,
+			"MinLength": 9
+		},
+		"AppName": {
+			"Type": "String",
+			"Default": "orderserv",
+			"Description": "Application Name"
+		}
+    },
+    "Resources": {
+        "orderservolouiTargetGroup": {
+            "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+            "Properties": {
+                 "Name" : { "Fn::Sub": "os-${Environment}-${Tenant}-tg-olo-ui" },
+                 "Protocol" : "HTTP",
+                 "Port" : 80,
+                 "TargetType" : "ip",
+                 "VpcId" : {"Ref" : "VpcId"},
+                 "HealthCheckProtocol" : "HTTP",
+                 "HealthCheckPath" : "/",
+                 "HealthCheckPort": "traffic-port",
+                 "HealthyThresholdCount" : 5,
+                 "UnhealthyThresholdCount" : 2,
+                 "HealthCheckTimeoutSeconds" : 60,
+                 "HealthCheckIntervalSeconds" : 120,
+                 "Matcher" : {
+                    "HttpCode" : "200"
+                },
+		"Tags" : [
+						{"Key": "Name", "Value": { "Fn::Sub": "os-${Environment}-${Tenant}-tg-olo-ui" }}, 
+						{"Key": "AppName", "Value": {"Fn::Join" : ["-",[{ "Ref": "AppName" },"ui"]]}},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+                ]
+            }
+        }       
+    },
+    "Outputs": {
+		  "ServiceTargetGroupStackName": {
+			"Description": "ServiceTargetGroupStackName",
+            "Value": {
+                "Fn::Sub": "${AWS::StackName}"
+            }
+        },
+        "orderservolouiTargetGroup": {
+            "Description": "OLO UI Target group",
+            "Value": {
+                "Ref": "orderservolouiTargetGroup"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservolouiTargetGroup"
+                }
+            }
+        }
+    }
+}

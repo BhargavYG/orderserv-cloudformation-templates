@@ -1,0 +1,85 @@
+{
+   "AWSTemplateFormatVersion":"2010-09-09",
+   "Description":"Stack to create Master Role Policy",
+   "Parameters":{
+      "AppName":{
+         "Type":"String",
+         "Default":"orderserv",
+         "Description":"Application Name"
+      }
+   },
+   "Resources":{
+      "ApiGatewayCloudWatchLogsRole":{
+         "Type":"AWS::IAM::Role",
+         "Properties":{
+            "RoleName":{
+               "Fn::Sub":"orderserv-${AWS::Region}-ApiGatewayCloudWatchLogsRole"
+            },
+            "AssumeRolePolicyDocument":{
+               "Version":"2012-10-17",
+               "Statement":[
+                  {
+                     "Effect":"Allow",
+                     "Principal":{
+                        "Service":[
+                           "apigateway.amazonaws.com"
+                        ]
+                     },
+                     "Action":[
+                        "sts:AssumeRole"
+                     ]
+                  }
+               ]
+            },
+            "Policies":[
+               {
+                  "PolicyName":{
+                     "Fn::Sub":"orderserv-${AWS::Region}-ApiGatewayLogsPolicy"
+                  },
+                  "PolicyDocument":{
+                     "Version":"2012-10-17",
+                     "Statement":[
+                        {
+                           "Effect":"Allow",
+                           "Action":[
+                              "logs:CreateLogGroup",
+                              "logs:CreateLogStream",
+                              "logs:DescribeLogGroups",
+                              "logs:DescribeLogStreams",
+                              "logs:PutLogEvents",
+                              "logs:GetLogEvents",
+                              "logs:FilterLogEvents"
+                           ],
+                           "Resource":{
+                              "Fn::Sub":"arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:*"
+                           }
+                        }
+                     ]
+                  }
+               }
+            ],
+            "Tags":[
+               {
+                  "Key":"Name",
+                  "Value":{
+                     "Fn::Sub":"orderserv-${AWS::Region}-ApiGatewayCloudWatchLogsRole"
+                  }
+               },
+               {
+                  "Key":"AppName",
+                  "Value":{
+                     "Ref":"AppName"
+                  }
+               }
+            ]
+         }
+      },
+	  "ApiGatewayAccount": {
+		  "DependsOn" : ["ApiGatewayCloudWatchLogsRole"],
+		  "Type" : "AWS::ApiGateway::Account",
+		  "Properties" : {
+			"CloudWatchRoleArn" : {"Fn::GetAtt" : ["ApiGatewayCloudWatchLogsRole", "Arn"] }
+		  }
+		}
+   }
+}

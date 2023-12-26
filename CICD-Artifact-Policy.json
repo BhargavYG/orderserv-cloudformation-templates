@@ -1,0 +1,398 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description" :  "Stack to create Api Gateway",
+    "Parameters":{
+		"AppName": {
+			"Type": "String",
+			"Default": "orderserv",
+			"Description": "Application Name"
+		}
+    },
+	"Resources": {			
+		"ArtifactCodeBuildRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+				"RoleName" : { "Fn::Sub": "orderserv-${AWS::Region}-artifact-CodeBuildRole" },
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "codebuild.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "Path": "/",
+                "Policies": [
+                    {
+                        "PolicyName": { "Fn::Sub": "orderserv-${AWS::Region}-artifact-CodeBuildPolicy" } ,
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "logs:CreateLogGroup",
+                                        "logs:CreateLogStream",
+                                        "logs:PutLogEvents"
+                                    ],
+                                    "Resource": {"Fn::Sub": "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*"}
+                                },
+								{
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "s3:PutObject",
+                                        "s3:GetObject",
+                                        "s3:GetObjectVersion",
+                                        "s3:GetBucketAcl",
+                                        "s3:GetBucketLocation"
+                                    ],
+                                    "Resource": "*"
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "codecommit:GitPull"
+                                    ],
+                                    "Resource": { "Fn::Sub": "arn:aws:codecommit:${AWS::Region}:${AWS::AccountId}:*"}
+                                },
+                                {
+                                    "Effect": "Allow",
+                                        "Action": [
+                                        "ssm:Describe*",
+                                        "ssm:Get*",
+                                        "ssm:List*"
+                                    ],
+                                    "Resource": "*"
+                                },
+								{
+								  "Action": [
+									"ssm:DescribeParameters",
+									"ssm:AddTagsToResource",
+									"ssm:DeleteParameter",
+									"ssm:DeleteParameters",
+									"ssm:DescribeDocumentParameters",
+									"ssm:LabelParameterVersion",
+									"ssm:GetParameter",
+									"ssm:GetParameterHistory",
+									"ssm:GetParameters",
+									"ssm:GetParametersByPath",
+									"ssm:PutParameter",
+									"ssm:RemoveTagsFromResource"
+								  ],
+								  "Resource": "*",
+								  "Effect": "Allow"
+								},
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "iam:CreateServiceLinkedRole"
+                                    ],
+                                    "Resource": "*",
+                                    "Condition": {
+                                        "StringEquals": {
+                                            "iam:AWSServiceName": [
+                                                "replication.ecr.amazonaws.com"
+                                            ]
+                                        }
+                                    }
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "ecr:*",
+                                        "cloudtrail:LookupEvents"
+                                    ],
+                                    "Resource": "*"
+                                },
+								{
+									"Action": [
+										"cloudfront:CreateInvalidation",
+										"cloudfront:GetDistribution",
+										"cloudfront:GetStreamingDistribution",
+										"cloudfront:GetDistributionConfig",
+										"cloudfront:GetInvalidation",
+										"cloudfront:ListInvalidations",
+										"cloudfront:ListStreamingDistributions",
+										"cloudfront:ListDistributions"
+									],
+									"Effect": "Allow",
+									"Resource": "*"
+								},
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "codebuild:CreateReportGroup",
+                                        "codebuild:CreateReport",
+                                        "codebuild:UpdateReport",
+                                        "codebuild:BatchPutTestCases",
+                                        "codebuild:BatchPutCodeCoverages"
+                                    ],
+                                    "Resource": { "Fn::Sub": "arn:aws:codebuild:${AWS::Region}:${AWS::AccountId}:*"}
+                                },
+								{
+									"Effect": "Allow",
+									"Action": [
+										"codeartifact:GetAuthorizationToken",
+										"codeartifact:GetRepositoryEndpoint",
+										"codeartifact:ReadFromRepository",
+										"codeartifact:PublishPackageVersion"
+									],
+									"Resource": "*"
+								},
+								{
+									"Effect": "Allow",
+									"Action": "sts:GetServiceBearerToken",
+									"Resource": "*",
+									"Condition": {
+										"StringEquals": {
+											"sts:AWSServiceName": "codeartifact.amazonaws.com"
+										}
+									}
+								}
+                            ]
+                        }
+                    }
+                ],
+				"Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${AWS::Region}-artifact-CodeBuildRole" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": "all"},
+						{"Key": "Tenant", "Value": "all"}
+				]
+            }
+        },
+        "ArtifactCodePipelineRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+				"RoleName" : { "Fn::Sub": "orderserv-${AWS::Region}-artifact-CodePipelineRole" },
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "codepipeline.amazonaws.com",
+									"events.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "Path": "/",
+                "Policies": [
+                    {
+                        "PolicyName": { "Fn::Sub": "orderserv-${AWS::Region}-artifact-CodePipelinePolicy" } ,
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Condition": {
+                                        "StringEqualsIfExists": {
+                                            "iam:PassedToService": [
+                                                "cloudformation.amazonaws.com",
+                                                "elasticbeanstalk.amazonaws.com",
+                                                "ec2.amazonaws.com",
+                                                "ecs-tasks.amazonaws.com"
+                                            ]
+                                        }
+                                    },
+                                    "Action": [
+                                        "iam:PassRole"
+                                    ],
+                                    "Resource": "*"
+                                },
+								{
+									"Effect": "Allow",
+									"Action": "codepipeline:StartPipelineExecution",
+									  "Resource": "*"
+								},
+
+								{
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "codecommit:CancelUploadArchive",
+                                        "codecommit:GetBranch",
+                                        "codecommit:GetCommit",
+                                        "codecommit:GetUploadArchiveStatus",
+                                        "codecommit:UploadArchive"
+                                    ],
+                                    "Resource": "*"
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "codedeploy:CreateDeployment",
+                                        "codedeploy:GetApplication",
+                                        "codedeploy:GetApplicationRevision",
+                                        "codedeploy:GetDeployment",
+                                        "codedeploy:GetDeploymentConfig",
+                                        "codedeploy:RegisterApplicationRevision"
+                                    ],
+                                    "Resource": "*"
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "codebuild:BatchGetBuilds",
+                                        "codebuild:StartBuild"
+                                    ],
+                                    "Resource": "*"
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "devicefarm:ListProjects",
+                                        "devicefarm:ListDevicePools",
+                                        "devicefarm:GetRun",
+                                        "devicefarm:GetUpload",
+                                        "devicefarm:CreateUpload",
+                                        "devicefarm:ScheduleRun"
+                                    ],
+                                    "Resource": "*"
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "servicecatalog:ListProvisioningArtifacts",
+                                        "servicecatalog:CreateProvisioningArtifact",
+                                        "servicecatalog:DescribeProvisioningArtifact",
+                                        "servicecatalog:DeleteProvisioningArtifact",
+                                        "servicecatalog:UpdateProduct"
+                                    ],
+                                    "Resource": "*"
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "s3:PutObject",
+                                        "s3:GetObject",
+                                        "s3:GetObjectVersion",
+                                        "s3:GetBucketAcl",
+                                        "s3:GetBucketLocation"
+                                    ],
+                                    "Resource": "*"
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "autoscaling:Describe*",
+                                        "autoscaling:UpdateAutoScalingGroup",
+                                        "cloudformation:CreateStack",
+                                        "cloudformation:DeleteStack",
+                                        "cloudformation:DescribeStack*",
+                                        "cloudformation:UpdateStack",
+                                        "cloudwatch:GetMetricStatistics",
+                                        "ec2:Describe*",
+                                        "elasticloadbalancing:*",
+                                        "ecs:*",
+                                        "events:DescribeRule",
+                                        "events:DeleteRule",
+                                        "events:ListRuleNamesByTarget",
+                                        "events:ListTargetsByRule",
+                                        "events:PutRule",
+                                        "events:PutTargets",
+                                        "events:RemoveTargets",
+                                        "iam:ListInstanceProfiles",
+                                        "iam:ListRoles",
+                                        "iam:PassRole"
+                                    ],
+                                    "Resource": "*"
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "ecr:DescribeImages"
+                                    ],
+                                    "Resource": "*"
+                                },
+								{
+									"Effect": "Allow",
+									"Action": [
+										"codeartifact:GetAuthorizationToken",
+										"codeartifact:GetRepositoryEndpoint",
+										"codeartifact:ReadFromRepository",
+										"codeartifact:PublishPackageVersion"
+									],
+									"Resource": "*"
+								},
+								{
+									"Effect": "Allow",
+									"Action": "sts:GetServiceBearerToken",
+									"Resource": "*",
+									"Condition": {
+										"StringEquals": {
+											"sts:AWSServiceName": "codeartifact.amazonaws.com"
+										}
+									}
+								}
+                            ]
+                        }
+                    }
+                ],
+				"Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${AWS::Region}-artifact-CodePipelineRole" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": "all"},
+						{"Key": "Tenant", "Value": "all"}
+				]
+            }
+        }
+    },
+    "Outputs": {
+		"ArtifactCodeBuildRole": {
+			"Value": {
+				"Ref": "ArtifactCodeBuildRole"
+            },
+            "Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-ArtifactCodeBuildRole"
+				}
+			}
+		},
+		"ArtifactCodeBuildRoleARN": {
+			"Value": {	
+					"Fn::GetAtt": [
+							"ArtifactCodeBuildRole",
+							"Arn"
+						]
+			},
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-ArtifactCodeBuildRoleARN"
+				}
+			}
+		},
+		"ArtifactCodePipelineRole": {
+			"Value": {
+				"Ref": "ArtifactCodePipelineRole"
+			}
+		},
+		"ArtifactCodePipelineRoleARN": {
+			"Value": {	
+					"Fn::GetAtt": [
+							"ArtifactCodePipelineRole",
+							"Arn"
+						]
+			},
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-ArtifactCodePipelineRoleARN"
+				}
+			}
+		}
+    }
+	
+}

@@ -1,0 +1,54 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "AWS CloudFormation Template for ALB Listner Rules",
+    "Parameters":{
+		"ServiceTargetGroupStackName":{
+			"Type": "String",
+			"Description": "Enter the Stack Name of ServiceTargetGroups"
+        },
+		"CCListenerArn":{
+			"Type": "String",
+			"Description": "ALB UI ListenerArn"
+        },
+		"Tenant": {
+			"Type": "String",
+			"Description": "Enter the tenant/country key",
+			"Default": "os-kfc-in",
+			"MaxLength": 9,
+			"MinLength": 9
+		},
+		"NestStackBucketName": {
+			"Type": "String",
+			"Default": "orderserv-cloudformation-stack-bucket",
+			"Description": "Name of the S3 bucket where Nest CFTs and Lambda zip files are placed"
+		},
+		"NestStackBucketNameENVPrefix": {
+			"Type": "String",
+			"Default": "DEV",
+			"Description": "Enter the Name of ENV as PROD",
+			"MaxLength": 4,
+			"MinLength": 2
+		}
+	},
+	"Resources": {
+		"orderservcallcenterTargetGroup":{
+            "Type" : "AWS::CloudFormation::Stack",
+            "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservcallcenter/ALB-Listener-Rules.json"},             
+              "TimeoutInMinutes" : "60",             
+              "Parameters" :{
+                "ServiceTargetGroupStackName" : {
+                    "Ref" : "ServiceTargetGroupStackName"
+                },
+                "Tenant" : {
+                    "Ref" : "Tenant"
+                },
+                "ListenerArn": {
+                    "Ref" : "CCListenerArn"
+                }
+                }
+            }
+		}
+	}
+}
+		

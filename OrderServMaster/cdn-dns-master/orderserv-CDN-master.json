@@ -1,0 +1,732 @@
+{
+    "AWSTemplateFormatVersion" : "2010-09-09",
+	"Parameters": {
+		"OLOAPISSLcertificateARN" :{
+			"Type": "String",
+			"Description": "SSLCertificateArn created in N.virginia region for OLO API"
+		},
+		"AssetSSLcertificateARN" :{
+			"Type": "String",
+			"Description": "SSLCertificateArn created in N.virginia region for Asset"
+		},
+		"Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"AppName": {
+			"Type": "String",
+			"Default": "orderserv",
+			"Description": "Application Name"
+		},
+		"OLOAPIGWID" :{
+			"Type": "String",
+			"Description": "OLOAPIGWID if already created"
+		},
+		"OLOAPIDomainName": {
+			"Type": "String",
+			"Default": "kfc-apac-olo-api",
+			"Description": "OLO API Domain name to form <ENV>.<OLOAPIDomainName>.cognizantorderservnxtgen.com"
+		},
+		"AssetDomainName": {
+			"Type": "String",
+			"Default": "kfc-assets",
+			"Description": "Asset Domain name to form <ENV>.<AssetDomainName>.cognizantorderservnxtgen.com"
+		},
+		"RegisteredDomainName": {
+			"Type": "String",
+			"Default": "cognizantorderservnxtgen.com",
+			"Description": "Enter the Registered Domain name from Route53"
+		},
+		"PRODAssetDomainName": {
+			"Type": "String",
+			"Default": "orderserv-kfc-assets.yum.com",
+			"Description": "Fully qualified domain name to be used when Environment=prod"
+		},
+		"PRODOLOAPIDomainName": {
+			"Type": "String",
+			"Default": "orderserv-kfc-apac-olo-api.yum.com",
+			"Description": "Fully qualified domain name to be used when Environment=prod"
+		},
+		"WafWebACLArnName": {
+			"Type": "String",
+			"Default": "global/webacl/yum-akamai-whitelist-acl/b664b0e9-28af-4538-9122-0cef7602c98c",
+			"Description": "Waf WebACLArn name to be used"
+		},
+		"WafRegion": {
+			"Type": "String",
+			"Description": "Full ARN resources Name of the Waf WebACL",
+			"Default": "us-east-1"
+		}
+	},
+	"Conditions": {
+        "IsProd": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Environment"
+                },
+                "prod"
+            ]
+        },
+		"IsUat": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Environment"
+                },
+                "uat"
+            ]
+        },
+		"EnableWafWebACL": {
+            "Fn::Or": [
+                {
+                    "Condition": "IsUat"
+                },
+				{
+                    "Condition": "IsProd"
+                }
+            ]
+        }
+	},
+    "Resources" : {
+		"OriginAccessIdcatalogs": {
+			"Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
+			"Properties": {
+				"CloudFrontOriginAccessIdentityConfig": {
+					"Comment": "OAI for catalogs bucket"
+				}
+			}
+		},
+		"OriginAccessIdnearbystr": {
+			"Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
+			"Properties": {
+				"CloudFrontOriginAccessIdentityConfig": {
+					"Comment": "OAI for nearby store Aggregator bucket"
+				}
+			}
+		},
+		"OriginAccessIdolocontent": {
+			"Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
+			"Properties": {
+				"CloudFrontOriginAccessIdentityConfig": {
+					"Comment": "OAI for olo content bucket"
+				}
+			}
+		},
+		"OriginAccessIdasset": {
+			"Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
+			"Properties": {
+				"CloudFrontOriginAccessIdentityConfig": {
+					"Comment": "OAI for asset bucket"
+				}
+			}
+		},
+		"AkamaiSureRouteTest": {
+			"Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
+			"Properties": {
+				"CloudFrontOriginAccessIdentityConfig": {
+					"Comment": { "Fn::Sub":"${Environment} OAI for akamai SureRouteTest Object" }
+				}
+			}
+		},
+		"OloOtherCachePolicy": {
+			"Type": "AWS::CloudFront::CachePolicy",
+			"Properties": {
+				"CachePolicyConfig": {
+					"DefaultTTL": 3600,
+					"MaxTTL": 3600,
+					"MinTTL": 0,
+					"Name": {
+						"Fn::Sub": "${Environment}-OloOtherCachePolicy"
+					},
+					"ParametersInCacheKeyAndForwardedToOrigin": {
+						"CookiesConfig": {
+							"CookieBehavior": "none"
+						},
+						"EnableAcceptEncodingBrotli": true,
+						"EnableAcceptEncodingGzip": true,
+						"HeadersConfig": {
+							"HeaderBehavior": "none"
+						},
+						"QueryStringsConfig": {
+							"QueryStringBehavior": "none"
+						}
+					}
+				}
+			}
+		},
+		"APIGWCachePolicy": {
+			"Type": "AWS::CloudFront::CachePolicy",
+			"Properties": {
+				"CachePolicyConfig": {
+					"DefaultTTL": 1,
+					"MaxTTL": 1,
+					"MinTTL": 1,
+					"Name": {
+						"Fn::Sub": "${Environment}-APIGWCachePolicy"
+					},
+					"ParametersInCacheKeyAndForwardedToOrigin": {
+						"CookiesConfig": {
+							"CookieBehavior": "none"
+						},
+						"EnableAcceptEncodingBrotli": true,
+						"EnableAcceptEncodingGzip": true,
+						"HeadersConfig": {
+							"HeaderBehavior": "whitelist",
+							"Headers": [ "Authorization","x-correlation-request-id","x-correlation-session-id","x-tenant-id","x-language" ]
+						},
+						"QueryStringsConfig": {
+							"QueryStringBehavior": "whitelist",
+							"QueryStrings" : ["CTO"]
+						}
+					}
+				}
+			}
+		},
+		"ImageCachePolicy": {
+			"Type": "AWS::CloudFront::CachePolicy",
+			"Properties": {
+				"CachePolicyConfig": {
+					"DefaultTTL": 86400,
+					"MaxTTL": 31536000,
+					"MinTTL": 86400,
+					"Name": {
+						"Fn::Sub": "${Environment}-ImageCachePolicy"
+					},
+					"ParametersInCacheKeyAndForwardedToOrigin": {
+						"CookiesConfig": {
+							"CookieBehavior": "none"
+						},
+						"EnableAcceptEncodingBrotli": true,
+						"EnableAcceptEncodingGzip": true,
+						"HeadersConfig": {
+							"HeaderBehavior": "none"
+						},
+						"QueryStringsConfig": {
+							"QueryStringBehavior": "whitelist",
+							"QueryStrings" : ["ver"]
+						}
+					}
+				}
+			}
+		},
+        "CORSOriginRequestPolicy": {
+            "Type": "AWS::CloudFront::OriginRequestPolicy",
+            "Properties": {
+                "OriginRequestPolicyConfig": {
+                    "CookiesConfig": {
+                        "CookieBehavior": "none"
+                    },
+                    "HeadersConfig": {
+                        "HeaderBehavior": "whitelist",
+						"Headers": ["Origin","Access-Control-Request-Headers","Access-Control-Request-Method"]
+                    },
+                    "QueryStringsConfig": {
+                        "QueryStringBehavior": "none"
+                    },
+                    "Name": {
+						"Fn::Sub": "${Environment}-CORSOriginRequestPolicy"
+					}
+                }
+            }
+        },
+		"OLOAPIDistribution" : {
+            "Type" : "AWS::CloudFront::Distribution",
+			"DependsOn" : ["OriginAccessIdcatalogs","OriginAccessIdnearbystr","OriginAccessIdolocontent","APIGWCachePolicy",
+			"OloOtherCachePolicy","OLOApiGatewayCDNFN", "AkamaiSureRouteTest"],
+            "Properties" : {
+                "DistributionConfig" : {
+                    "Origins" : [ 
+					{
+						"Id" : "oloapiorigin",
+						"DomainName" : { "Fn::Sub" : "${OLOAPIGWID}.execute-api.${AWS::Region}.amazonaws.com" },
+						"CustomOriginConfig" : {
+							"HTTPPort" : "80",
+							"HTTPSPort" : "443",
+							"OriginProtocolPolicy" : "https-only",
+							"OriginSSLProtocols" : ["TLSv1.2"]
+						}
+					},
+					{
+						"Id" : "catalogsS3Origin",
+						"DomainName" : { "Fn::Sub" : "${AppName}-${AWS::Region}-${Environment}-menu-catalogs-bucket.s3.amazonaws.com" },
+						"S3OriginConfig" : {
+							"OriginAccessIdentity" : { 
+								"Fn::Join": ["/",["origin-access-identity","cloudfront",{"Ref" : "OriginAccessIdcatalogs"}]]
+							}
+						}
+					},
+					{
+						"Id" : "nearbyS3Origin",
+						"DomainName" : { "Fn::Sub" : "${AppName}-${AWS::Region}-${Environment}-nearby-store-agg-bucket.s3.amazonaws.com" },
+						"S3OriginConfig" : {
+							"OriginAccessIdentity" : { 
+							  "Fn::Join": ["/",["origin-access-identity","cloudfront",{"Ref" : "OriginAccessIdnearbystr"}]]
+							}
+						}
+					},
+					{
+						"Id" : "olocontentS3Origin",
+						"DomainName" : { "Fn::Sub" : "${AppName}-${AWS::Region}-${Environment}-olo-content.s3.amazonaws.com" },
+						"S3OriginConfig" : {
+							"OriginAccessIdentity" : { 
+								"Fn::Join": ["/",["origin-access-identity","cloudfront",{"Ref" : "OriginAccessIdolocontent"}]]
+							}
+						}
+					},
+					{
+						"Id" : "akamaiSureRouteS3Origin",
+						"DomainName" : { "Fn::Sub" : "${AppName}-${AWS::Region}-${Environment}-olo-content.s3.amazonaws.com" },
+						"S3OriginConfig" : {
+							"OriginAccessIdentity" : { 
+								"Fn::Join": ["/",["origin-access-identity","cloudfront",{"Ref" : "AkamaiSureRouteTest"}]]
+							}
+						}
+					}
+					],
+                    "Enabled" : "true",
+					"Aliases" : [
+									{"Fn::If" : [
+										"IsProd",
+										{"Ref" : "PRODOLOAPIDomainName"},
+										{ 
+											"Fn::Join": ["",[{"Ref" : "Environment"},"-",{"Ref" : "OLOAPIDomainName"},".",{"Ref" : "RegisteredDomainName"}]]
+										}
+									]}
+								]
+					,
+                    "Comment" : { "Fn::Sub": "${Environment}-OLOAPI" },
+					"DefaultCacheBehavior" : {
+						"AllowedMethods" : [ "GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE" ],
+                        "TargetOriginId" : "oloapiorigin",
+						"CachePolicyId": {"Ref": "APIGWCachePolicy"},
+						"DefaultTTL": 0,
+						"MaxTTL": 0,
+						"MinTTL": 0,
+                        "SmoothStreaming" : "false",
+                        "ViewerProtocolPolicy" : "https-only"
+                    },
+					"CacheBehaviors" : [ {
+                            "AllowedMethods" : [ "GET", "HEAD", "OPTIONS" ], 
+							"CachedMethods" : [ "GET", "HEAD", "OPTIONS" ],
+                            "TargetOriginId" : "catalogsS3Origin",
+                            "CachePolicyId" : {"Ref" : "OloOtherCachePolicy"},
+							"OriginRequestPolicyId" : {"Ref" : "CORSOriginRequestPolicy"},
+                            "ViewerProtocolPolicy" : "https-only",
+                            "MinTTL" : "50",
+                            "PathPattern" : "dev/v1/menu-catalogs/*",
+							"FunctionAssociations" : [{
+							  "EventType" : "viewer-response",
+							  "FunctionARN" : { "Fn::GetAtt" : [ "OLOApiGatewayCDNFN", "FunctionARN" ] }
+							}]
+                        },
+						{
+                            "AllowedMethods" : [ "GET", "HEAD", "OPTIONS" ], 
+							"CachedMethods" : [ "GET", "HEAD" ],
+                            "TargetOriginId" : "catalogsS3Origin",
+                            "CachePolicyId" : {"Ref" : "OloOtherCachePolicy"},
+							"OriginRequestPolicyId" : {"Ref" : "CORSOriginRequestPolicy"},
+                            "ViewerProtocolPolicy" : "https-only",
+                            "MinTTL" : "50",
+                            "PathPattern" : "dev/v1/catalogs/*",
+							"FunctionAssociations" : [{
+							  "EventType" : "viewer-response",
+							  "FunctionARN" : { "Fn::GetAtt" : [ "OLOApiGatewayCDNFN", "FunctionARN" ] }
+							}]
+                        },
+						{
+                            "AllowedMethods" : [ "GET", "HEAD", "OPTIONS" ],  
+							"CachedMethods" : [ "GET", "HEAD", "OPTIONS" ],
+                            "TargetOriginId" : "nearbyS3Origin",
+                            "CachePolicyId" : {"Ref" : "OloOtherCachePolicy"},
+							"OriginRequestPolicyId" : {"Ref" : "CORSOriginRequestPolicy"},
+                            "ViewerProtocolPolicy" : "https-only",
+                            "MinTTL" : "50",
+                            "PathPattern" : "dev/v1/nearby-stores/*",
+							"FunctionAssociations" : [{
+							  "EventType" : "viewer-response",
+							  "FunctionARN" : { "Fn::GetAtt" : [ "OLOApiGatewayCDNFN", "FunctionARN" ] }
+							}]
+                        },
+						{
+                            "AllowedMethods" : [ "GET", "HEAD", "OPTIONS" ],  
+							"CachedMethods" : [ "GET", "HEAD", "OPTIONS" ],
+                            "TargetOriginId" : "olocontentS3Origin",
+                            "CachePolicyId" : {"Ref" : "OloOtherCachePolicy"}, 
+							"OriginRequestPolicyId" : {"Ref" : "CORSOriginRequestPolicy"},
+                            "ViewerProtocolPolicy" : "https-only",
+                            "MinTTL" : "50",
+                            "PathPattern" : "dev/v1/content/*/home/*",
+							"FunctionAssociations" : [{
+							  "EventType" : "viewer-response",
+							  "FunctionARN" : { "Fn::GetAtt" : [ "OLOApiGatewayCDNFN", "FunctionARN" ] }
+							}]
+                        },
+						{
+                            "AllowedMethods" : [ "GET", "HEAD", "OPTIONS" ],  
+							"CachedMethods" : [ "GET", "HEAD", "OPTIONS" ],
+                            "TargetOriginId" : "akamaiSureRouteS3Origin",
+                            "ViewerProtocolPolicy" : "https-only",
+							"CachePolicyId" : "658327ea-f89d-4fab-a63d-7e88639e58f6",
+                            "PathPattern" : "akamai/*",
+							"FunctionAssociations" : [{
+							  "EventType" : "viewer-response",
+							  "FunctionARN" : { "Fn::GetAtt" : [ "OLOApiGatewayCDNFN", "FunctionARN" ] }
+							}]
+                        }
+                   ],
+                    
+                   "ViewerCertificate": { 
+						"SslSupportMethod" : "sni-only",
+						"AcmCertificateArn" : {"Ref": "OLOAPISSLcertificateARN"},
+						"MinimumProtocolVersion" : "TLSv1.2_2021"
+					},
+				   "WebACLId" :  {"Fn::If" : [
+						"EnableWafWebACL",
+						{ 
+							"Fn::Join": [":",["arn:aws:wafv2",{"Ref" : "WafRegion"},{"Ref": "AWS::AccountId"},{"Ref" : "WafWebACLArnName"}]]
+						},
+						{"Ref" : "AWS::NoValue"}
+					]}
+                },
+				"Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-OLOAPIDistribution" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }}
+					]
+            }
+        },
+		"CatalogsBucketPolicy": {
+            "Type": "AWS::S3::BucketPolicy",
+			"DependsOn" : "OLOAPIDistribution",
+            "Properties": {
+                "PolicyDocument": {
+                    "Id": "s3Policy",
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Sid": "PublicReadForGetBucketObjects",
+                            "Effect": "Allow",
+                            "Principal": {
+									"CanonicalUser": {
+                                    "Fn::GetAtt": [
+                                        "OriginAccessIdcatalogs",
+                                        "S3CanonicalUserId"
+                                    ]
+                                }
+							},
+                            "Action": "s3:GetObject",
+                            "Resource": {
+                                "Fn::Join": [
+                                    "",
+                                    ["arn:aws:s3:::",{"Ref" : "AppName"},"-",{"Ref" : "AWS::Region"},"-",{"Ref" : "Environment"},"-","menu-catalogs-bucket","/*"]
+                                ]
+                            }
+                        },
+						{
+							"Effect":"Deny",
+							"Principal": "*",
+							"Action": [
+								"s3:*"
+							],
+							"Resource": {
+                                "Fn::Join": [
+                                    "",
+                                    ["arn:aws:s3:::",{"Ref" : "AppName"},"-",{"Ref" : "AWS::Region"},"-",{"Ref" : "Environment"},"-","menu-catalogs-bucket"]
+                                ],
+								"Fn::Join": [
+                                    "",
+                                    ["arn:aws:s3:::",{"Ref" : "AppName"},"-",{"Ref" : "AWS::Region"},"-",{"Ref" : "Environment"},"-","menu-catalogs-bucket","/*"]
+                                ]
+                            },
+							"Condition": {
+								"Bool": {
+								  "aws:SecureTransport": false
+								}
+							}
+						}
+                    ]
+                },
+                "Bucket": { "Fn::Sub" : "${AppName}-${AWS::Region}-${Environment}-menu-catalogs-bucket" }
+            }
+        },
+		"NearbyBucketPolicy": {
+            "Type": "AWS::S3::BucketPolicy",
+			"DependsOn" : "OLOAPIDistribution",
+            "Properties": {
+                "PolicyDocument": {
+                    "Id": "s3Policy",
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Sid": "PublicReadForGetBucketObjects",
+                            "Effect": "Allow",
+                            "Principal": {
+									"CanonicalUser": {
+                                    "Fn::GetAtt": [
+                                        "OriginAccessIdnearbystr",
+                                        "S3CanonicalUserId"
+                                    ]
+                                }
+							},
+                            "Action": "s3:GetObject",
+                            "Resource": {
+                                "Fn::Join": [
+                                    "",
+                                    ["arn:aws:s3:::",{"Ref" : "AppName"},"-",{"Ref" : "AWS::Region"},"-",{"Ref" : "Environment"},"-","nearby-store-agg-bucket","/*"]
+                                ]
+                            }
+                        },
+						{
+							"Effect":"Deny",
+							"Principal": "*",
+							"Action": [
+								"s3:*"
+							],
+							"Resource": {
+                                "Fn::Join": [
+                                    "",
+                                    ["arn:aws:s3:::",{"Ref" : "AppName"},"-",{"Ref" : "AWS::Region"},"-",{"Ref" : "Environment"},"-","nearby-store-agg-bucket"]
+                                ],
+								"Fn::Join": [
+                                    "",
+                                    ["arn:aws:s3:::",{"Ref" : "AppName"},"-",{"Ref" : "AWS::Region"},"-",{"Ref" : "Environment"},"-","nearby-store-agg-bucket","/*"]
+                                ]
+                            },
+							"Condition": {
+								"Bool": {
+								  "aws:SecureTransport": false
+								}
+							}
+						}
+                    ]
+                },
+                "Bucket": { "Fn::Sub" : "${AppName}-${AWS::Region}-${Environment}-nearby-store-agg-bucket" }
+            }
+        },
+		"OloContentBucketPolicy": {
+            "Type": "AWS::S3::BucketPolicy",
+			"DependsOn" : "OLOAPIDistribution",
+            "Properties": {
+                "PolicyDocument": {
+                    "Id": "s3Policy",
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Sid": "PublicReadForGetBucketObjects",
+                            "Effect": "Allow",
+                            "Principal":
+								{
+								"CanonicalUser": {
+                                    "Fn::GetAtt": [
+                                        "OriginAccessIdolocontent",
+                                        "S3CanonicalUserId"
+                                    ]}
+								}
+							,
+                            "Action": "s3:GetObject",
+                            "Resource": {
+                                "Fn::Join": [
+                                    "",
+                                    ["arn:aws:s3:::",{"Ref" : "AppName"},"-",{"Ref" : "AWS::Region"},"-",{"Ref" : "Environment"},"-","olo-content","/*"]
+                                ]
+                            }
+                        },
+						{
+                            "Sid": "AkamaiReadForGetBucketObjects",
+                            "Effect": "Allow",
+                            "Principal": {
+								"CanonicalUser": {
+                                    "Fn::GetAtt": [
+                                        "AkamaiSureRouteTest",
+                                        "S3CanonicalUserId"
+                                    ]
+                                }
+							},
+                            "Action": "s3:GetObject",
+                            "Resource": {
+                                "Fn::Join": [
+                                    "",
+                                    ["arn:aws:s3:::",{"Ref" : "AppName"},"-",{"Ref" : "AWS::Region"},"-",{"Ref" : "Environment"},"-","olo-content","/akamai/*"]
+                                ]
+                            }
+                        },
+						{
+							"Effect":"Deny",
+							"Principal": "*",
+							"Action": [
+								"s3:*"
+							],
+							"Resource": {
+                                "Fn::Join": [
+                                    "",
+                                    ["arn:aws:s3:::",{"Ref" : "AppName"},"-",{"Ref" : "AWS::Region"},"-",{"Ref" : "Environment"},"-","olo-content"]
+                                ],
+								"Fn::Join": [
+                                    "",
+                                    ["arn:aws:s3:::",{"Ref" : "AppName"},"-",{"Ref" : "AWS::Region"},"-",{"Ref" : "Environment"},"-","olo-content","/*"]
+                                ]
+                            },
+							"Condition": {
+								"Bool": {
+								  "aws:SecureTransport": false
+								}
+							}
+						}
+                    ]
+                },
+                "Bucket": { "Fn::Sub" : "${AppName}-${AWS::Region}-${Environment}-olo-content" }
+            }
+        },
+		"AssetDistribution" : {
+            "Type" : "AWS::CloudFront::Distribution",
+			"DependsOn" : "OriginAccessIdasset",
+            "Properties" : {
+                "DistributionConfig" : {
+                    "Origins" : [ 
+					{
+						"Id" : "assetS3Origin",
+						"DomainName" : { "Fn::Sub" : "${AppName}-${AWS::Region}-${Environment}-asset.s3.amazonaws.com" },
+						"S3OriginConfig" : {
+							"OriginAccessIdentity" : { 
+								"Fn::Join": ["/",["origin-access-identity","cloudfront",{"Ref" : "OriginAccessIdasset"}]]
+							}
+						}
+					},
+					{
+						"Id" : "akamaiSureRouteS3Origin",
+						"DomainName" : { "Fn::Sub" : "${AppName}-${AWS::Region}-${Environment}-olo-content.s3.amazonaws.com" },
+						"S3OriginConfig" : {
+							"OriginAccessIdentity" : { 
+								"Fn::Join": ["/",["origin-access-identity","cloudfront",{"Ref" : "AkamaiSureRouteTest"}]]
+							}
+						}
+					}
+					],
+                    "Enabled" : "true",
+					"Aliases" : [
+									{"Fn::If" : [
+										"IsProd",
+										{"Ref" : "PRODAssetDomainName"},
+										{ 
+											"Fn::Join": ["",[{"Ref" : "Environment"},"-",{"Ref" : "AssetDomainName"},".",{"Ref" : "RegisteredDomainName"}]]
+										}
+									]}
+								],
+                    "Comment" : { "Fn::Sub": "${Environment}-Asset" },
+					"DefaultCacheBehavior" : {
+                        "TargetOriginId" : "assetS3Origin",
+						"AllowedMethods" : [ "GET", "HEAD", "OPTIONS" ],
+                        "CachePolicyId" : {"Ref" : "ImageCachePolicy"},
+                        "ViewerProtocolPolicy" : "https-only",
+                        "MinTTL" : "50"
+                    },
+					"CacheBehaviors":[
+					{
+                            "AllowedMethods" : [ "GET", "HEAD", "OPTIONS" ],  
+							"CachedMethods" : [ "GET", "HEAD", "OPTIONS" ],
+                            "TargetOriginId" : "akamaiSureRouteS3Origin",
+                            "ViewerProtocolPolicy" : "https-only",
+							"CachePolicyId" : "658327ea-f89d-4fab-a63d-7e88639e58f6",
+                            "PathPattern" : "akamai/*"
+                        }
+					],
+                    
+                   "ViewerCertificate": { 
+						"SslSupportMethod" : "sni-only",
+						"AcmCertificateArn" : {"Ref": "AssetSSLcertificateARN"},
+						"MinimumProtocolVersion" : "TLSv1.2_2021"
+					},
+				   "WebACLId" :  {"Fn::If" : [
+						"EnableWafWebACL",
+						{ 
+							"Fn::Join": [":",["arn:aws:wafv2",{"Ref" : "WafRegion"},{"Ref": "AWS::AccountId"},{"Ref" : "WafWebACLArnName"}]]
+						},
+						{"Ref" : "AWS::NoValue"}
+					]}
+                },
+				"Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-AssetDistribution" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }}
+					]
+            }
+        },
+		"AssetBucketPolicy": {
+            "Type": "AWS::S3::BucketPolicy",
+			"DependsOn" : "AssetDistribution",
+            "Properties": {
+                "PolicyDocument": {
+                    "Id": "s3Policy",
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Sid": "PublicReadForGetBucketObjects",
+                            "Effect": "Allow",
+                            "Principal": {
+									"CanonicalUser": {
+                                    "Fn::GetAtt": [
+                                        "OriginAccessIdasset",
+                                        "S3CanonicalUserId"
+                                    ]
+                                }
+							},
+                            "Action": "s3:GetObject",
+                            "Resource": {
+                                "Fn::Join": [
+                                    "",
+                                    ["arn:aws:s3:::",{"Ref" : "AppName"},"-",{"Ref" : "AWS::Region"},"-",{"Ref" : "Environment"},"-","asset","/*"]
+                                ]
+                            }
+                        },
+						{
+							"Effect":"Deny",
+							"Principal": "*",
+							"Action": [
+								"s3:*"
+							],
+							"Resource": {
+                                "Fn::Join": [
+                                    "",
+                                    ["arn:aws:s3:::",{"Ref" : "AppName"},"-",{"Ref" : "AWS::Region"},"-",{"Ref" : "Environment"},"-","asset"]
+                                ],
+								"Fn::Join": [
+                                    "",
+                                    ["arn:aws:s3:::",{"Ref" : "AppName"},"-",{"Ref" : "AWS::Region"},"-",{"Ref" : "Environment"},"-","asset","/*"]
+                                ]
+                            },
+							"Condition": {
+								"Bool": {
+								  "aws:SecureTransport": false
+								}
+							}
+						}
+                    ]
+                },
+                "Bucket": { "Fn::Sub" : "${AppName}-${AWS::Region}-${Environment}-asset" }
+            }
+        },
+		"OLOApiGatewayCDNFN" : 
+		{
+		  "Type" : "AWS::CloudFront::Function",
+		  "Properties" : {
+			  "AutoPublish" : true,
+			  "FunctionCode" : "function handler(event)  {\r\n    var request = event.request;\r\n    var response  = event.response;\r\n \r\n    \/\/ If Access-Control-Allow-Origin CORS header is missing, add it.\r\n    \/\/ Since JavaScript doesn't allow for hyphens in variable names, we use the dict[\"key\"] notation.\r\n    if (!response.headers['access-control-allow-origin'] && request.headers['origin']) {\r\n        response.headers['access-control-allow-origin'] = {value: request.headers['origin'].value};\r\n        console.log(\"Access-Control-Allow-Origin was missing, adding it now.\");\r\n    }\r\n\r\n    return response;\r\n}",
+			  "FunctionConfig" : {
+						  "Comment" : "JS code to resolve CORS issue on S3 Origin Call",
+						  "Runtime" : "cloudfront-js-1.0"
+						},
+			  "Name" : { "Fn::Sub" : "ordeserv-${Environment}-OLOApiGatewayCDNFN"}
+			}
+		}
+    },
+	"Outputs": {
+        "akamaiOAI": {
+            "Value": {
+                "Ref": "AkamaiSureRouteTest"
+            }
+        }
+    }
+}

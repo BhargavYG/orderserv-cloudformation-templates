@@ -1,0 +1,353 @@
+{
+    "AWSTemplateFormatVersion" : "2010-09-09",
+	"Parameters": {
+		"HostedzoneID" :{
+			"Type": "String",
+			"Description": "HostedzoneID under which the record will be created"
+		},
+		"AdminUICDNURL" :{
+			"Type": "String",
+			"Description": "AdminUICDNURL if already created"
+		},
+		"Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"AdminUIDomainName": {
+			"Type": "String",
+			"Default": "kfc-in-admin",
+			"Description": "Admin UI Domain name to form <ENV>.<AdminUIDomainName>.cognizantorderservnxtgen.com"
+		},
+		"OLOUICDNURL" :{
+			"Type": "String",
+			"Description": "OLOUICDNURL if already created"
+		},
+		"SSLcertificateARN" :{
+			"Type": "String",
+			"Description": "Enter the SSLCertificateArn created in the current region for kfc-in(tenant)"
+		},
+		"AdminbffRestApiID" :{
+			"Type": "String",
+			"Description": "AdminbffRestApi if already created"
+		},
+		"AggregatorRestApiID" :{
+			"Type": "String",
+			"Description": "AggregatorRestApi if already created"
+		},
+		"CallCenterApiID" :{
+			"Type": "String",
+			"Description": "CallCenterApi if already created"
+		},
+		"DomainType" :{
+			"Type": "String",
+			"Default": "REGIONAL",
+			"Description": "Domain Type REGIONAL/EDGE"
+		},		
+		"OLOUIDomainName": {
+			"Type": "String",
+			"Default": "kfc-in",
+			"Description": "OLOUI Domain name to form <ENV>.<OLOUIDomainName>.cognizantorderservnxtgen.com"
+		},
+		"AdminBffDomainName": {
+			"Type": "String",
+			"Default": "kfc-in-admin-api",
+			"Description": "AdminBffDomainName Domain name to form <ENV>.<AdminBffDomainName>.cognizantorderservnxtgen.com"
+		},
+		"AggIntDomainName": {
+			"Type": "String",
+			"Default": "kfc-in-aggregator-api",
+			"Description": "Aggregator Integration Domain Name to form <ENV>.<AggregatorDomainName>.cognizantorderservnxtgen.com"
+		},
+		"CallCenterDomainName": {
+			"Type": "String",
+			"Default": "kfc-in-cc",
+			"Description": "Aggregator Integration Domain Name to form <ENV>.<CallCenterDomainName>.cognizantorderservnxtgen.com"
+		},
+		"RegisteredDomainName": {
+			"Type": "String",
+			"Default": "cognizantorderservnxtgen.com",
+			"Description": "Enter the Registered Domain name from Route53"
+		},
+		"Tenant": {
+            "Type": "String",
+            "Description": "Enter the tenant/country key",
+            "Default": "os-kfc-in",
+            "MaxLength": 9,
+            "MinLength": 9
+        },
+		"AppName": {
+			"Type": "String",
+			"Default": "orderserv",
+			"Description": "Application Name"
+		},
+		"AkamaiRestApiID" :{
+			"Type": "String",
+			"Default": "tlhotlaw89",
+			"Description": "Rest Api ID of Akamai ApiGateway"
+		}
+	
+	},
+	"Conditions": {
+        "IsIndTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-in"
+            ]
+        }
+	},
+    "Resources" : {
+		"AdminUIDNSRecord" : {
+		  "Type" : "AWS::Route53::RecordSet",
+		  "Properties" : 
+		  {
+			"HostedZoneId" : {"Ref": "HostedzoneID"},
+			"Name" : { 
+								"Fn::Join": ["",[{"Ref" : "Environment"},"-",{"Ref" : "AdminUIDomainName"},".",{"Ref" : "RegisteredDomainName"}]]
+							},
+			"Type" : "CNAME",
+			"TTL" : "300",
+			"ResourceRecords" : [ {"Ref": "AdminUICDNURL"} ]
+		  }
+		},
+		"OLOUIDNSRecord" : {
+		  "Type" : "AWS::Route53::RecordSet",
+		  "Properties" : 
+		  {
+			"HostedZoneId" : {"Ref": "HostedzoneID"},
+			"Name" : { 
+								"Fn::Join": ["",[{"Ref" : "Environment"},"-",{"Ref" : "OLOUIDomainName"},".",{"Ref" : "RegisteredDomainName"}]]
+							},
+			"Type" : "CNAME",
+			"TTL" : "300",
+			"ResourceRecords" : [ {"Ref": "OLOUICDNURL"} ]
+		  }
+		},		
+		"AdminbffDomainName": {
+			"Type": "AWS::ApiGateway::DomainName",
+			"Properties": {
+				"DomainName": { 
+								"Fn::Join": ["",[{"Ref" : "Environment"},"-",{"Ref" : "AdminBffDomainName"},".",{"Ref" : "RegisteredDomainName"}]]
+							},
+				"RegionalCertificateArn": {"Ref": "SSLcertificateARN"},
+				"EndpointConfiguration": {
+					"Types": [
+					{
+					  "Ref": "DomainType"
+					}
+					]
+				},
+				"SecurityPolicy": "TLS_1_2",
+				"Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Join": ["",[{"Ref" : "Environment"},"-",{"Ref" : "AdminBffDomainName"},".",{"Ref" : "RegisteredDomainName"}]] } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"AdminbffdomainMapping": {
+            "Type": "AWS::ApiGateway::BasePathMapping",
+			"DependsOn" : "AdminbffDomainName",
+            "Properties": {
+                "DomainName": { 
+								"Fn::Join": ["",[{"Ref" : "Environment"},"-",{"Ref" : "AdminBffDomainName"},".",{"Ref" : "RegisteredDomainName"}]]
+							},
+                "RestApiId": {
+                    "Ref": "AdminbffRestApiID"
+                },
+				"Stage" : "dev"
+            }
+        },
+		"AkamaiAdminBffMapping": {
+            "Type": "AWS::ApiGateway::BasePathMapping",
+			"DependsOn" : "AdminbffDomainName",
+            "Properties": {
+                "DomainName": { 
+								"Fn::Join": ["",[{"Ref" : "Environment"},"-",{"Ref" : "AdminBffDomainName"},".",{"Ref" : "RegisteredDomainName"}]]
+							},
+                "RestApiId": {
+                    "Ref": "AkamaiRestApiID"
+                },
+				"Stage" : "dev",
+				"BasePath" :"akamai"
+            }
+        },
+		"AkamaiAggregatorMapping": {
+            "Type": "AWS::ApiGateway::BasePathMapping",
+			"DependsOn" : "AggregatorDomainName",
+            "Properties": {
+                "DomainName": { 
+								"Fn::Join": ["",[{"Ref" : "Environment"},"-",{"Ref" : "AggIntDomainName"},".",{"Ref" : "RegisteredDomainName"}]]
+							},
+                "RestApiId": {
+                    "Ref": "AkamaiRestApiID"
+                },
+				"Stage" : "dev",
+				"BasePath" :"akamai"
+            }
+        },
+		"AdminBffDNSRecord" : {
+		  "Type" : "AWS::Route53::RecordSet",
+		  "DependsOn" : ["AdminbffDomainName","AdminbffdomainMapping"],
+		  "Properties" : 
+		  {
+			"HostedZoneId" : {"Ref": "HostedzoneID"},
+			"Name" : { 
+								"Fn::Join": ["",[{"Ref" : "Environment"},"-",{"Ref" : "AdminBffDomainName"},".",{"Ref" : "RegisteredDomainName"}]]
+							},
+			"Type" : "A",
+			"AliasTarget" : {
+				"DNSName" : { 
+                  "Fn::GetAtt" : [ 
+                     "AdminbffDomainName", 
+                     "RegionalDomainName" 
+                  ] 
+               },
+				"HostedZoneId" : { 
+                  "Fn::GetAtt" : [ 
+                     "AdminbffDomainName", 
+                     "RegionalHostedZoneId" 
+                  ] 
+               },
+			   "EvaluateTargetHealth" : "false"
+			}
+		  }
+		},
+		"AggregatorDomainName": {
+			"Type": "AWS::ApiGateway::DomainName",
+			"Properties": {
+				"DomainName": { 
+								"Fn::Join": ["",[{"Ref" : "Environment"},"-",{"Ref" : "AggIntDomainName"},".",{"Ref" : "RegisteredDomainName"}]]
+							},
+				"RegionalCertificateArn": {"Ref": "SSLcertificateARN"},
+				"EndpointConfiguration": {
+					"Types": [
+					{
+					  "Ref": "DomainType"
+					}
+					]
+				},
+				"SecurityPolicy": "TLS_1_2",
+				"Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Join": ["",[{"Ref" : "Environment"},"-",{"Ref" : "AggIntDomainName"},".",{"Ref" : "RegisteredDomainName"}]] } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"AggregatordomainMapping": {
+            "Type": "AWS::ApiGateway::BasePathMapping",
+			"DependsOn" : "AggregatorDomainName",
+            "Properties": {
+                "DomainName": { 
+								"Fn::Join": ["",[{"Ref" : "Environment"},"-",{"Ref" : "AggIntDomainName"},".",{"Ref" : "RegisteredDomainName"}]]
+							},
+                "RestApiId": {
+                    "Ref": "AggregatorRestApiID"
+                },
+				"Stage" : "dev"
+            }
+        },
+		"AggregatorDNSRecord" : {
+		  "Type" : "AWS::Route53::RecordSet",
+		  "DependsOn" : ["AggregatorDomainName","AggregatordomainMapping"],
+		  "Properties" : 
+		  {
+			"HostedZoneId" : {"Ref": "HostedzoneID"},
+			"Name" : { 
+								"Fn::Join": ["",[{"Ref" : "Environment"},"-",{"Ref" : "AggIntDomainName"},".",{"Ref" : "RegisteredDomainName"}]]
+							},
+			"Type" : "A",
+			"AliasTarget" : {
+				"DNSName" : { 
+                  "Fn::GetAtt" : [ 
+                     "AggregatorDomainName", 
+                     "RegionalDomainName" 
+                  ] 
+               },
+				"HostedZoneId" : { 
+                  "Fn::GetAtt" : [ 
+                     "AggregatorDomainName", 
+                     "RegionalHostedZoneId" 
+                  ] 
+               },
+			   "EvaluateTargetHealth" : "false"
+			}
+		  }
+		},
+		"CallCenterAppDomainName": {
+			"Type": "AWS::ApiGateway::DomainName",
+			"Condition" : "IsIndTenant",
+			"Properties": {
+				"DomainName": { 
+								"Fn::Join": ["",[{"Ref" : "Environment"},"-",{"Ref" : "CallCenterDomainName"},".",{"Ref" : "RegisteredDomainName"}]]
+							},
+				"RegionalCertificateArn": {"Ref": "SSLcertificateARN"},
+				"EndpointConfiguration": {
+					"Types": [
+					{
+					  "Ref": "DomainType"
+					}
+					]
+				},
+				"SecurityPolicy": "TLS_1_2",
+				"Tags": [ 
+						{"Key": "Name", "Value": { "Fn::Join": ["",[{"Ref" : "Environment"},"-",{"Ref" : "CallCenterDomainName"},".",{"Ref" : "RegisteredDomainName"}]] } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+					] 
+			}
+		},
+		"CallCenterDNSRecord" : {
+		  "Type" : "AWS::Route53::RecordSet",
+		  "Condition" : "IsIndTenant",
+		  "DependsOn" : ["CallCenterAppDomainName"],
+		  "Properties" : 
+		  {
+			"HostedZoneId" : {"Ref": "HostedzoneID"},
+			"Name" : { 
+								"Fn::Join": ["",[{"Ref" : "Environment"},"-",{"Ref" : "CallCenterDomainName"},".",{"Ref" : "RegisteredDomainName"}]]
+							},
+			"Type" : "A",
+			"AliasTarget" : {
+				"DNSName" : { 
+                  "Fn::GetAtt" : [ 
+                     "CallCenterAppDomainName", 
+                     "RegionalDomainName" 
+                  ] 
+               },
+				"HostedZoneId" : { 
+                  "Fn::GetAtt" : [ 
+                     "CallCenterAppDomainName", 
+                     "RegionalHostedZoneId" 
+                  ] 
+               },
+			   "EvaluateTargetHealth" : "false"
+			}
+		  }
+		},
+		"CallCenterAPIMapping": {
+            "Type": "AWS::ApiGatewayV2::ApiMapping",
+			"Condition" : "IsIndTenant",
+			"DependsOn" : "CallCenterAppDomainName",
+            "Properties": {
+                "DomainName": { 
+								"Ref" : "CallCenterAppDomainName"
+							},
+                "ApiId": {
+                    "Ref": "CallCenterApiID"
+                },
+				"Stage" : "api"
+            }
+        }
+		
+	}	
+}

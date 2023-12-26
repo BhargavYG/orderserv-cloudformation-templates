@@ -1,0 +1,147 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description" :  "Stack to create Api Gateway",
+    "Parameters":{
+		"Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"AppName": {
+			"Type": "String",
+			"Default": "order-serv",
+			"Description": "Application Name"
+		},
+		"ALBListenerARN" :{
+			"Type" : "String",
+			"Description" : "ALB Listener ARN for Stage Variable"
+		},
+		"PrivateSubnet01": {
+            "Type": "String",
+            "Description": "Enter the Private Subnet 01 ID"
+        },
+		"PrivateSubnet02": {
+            "Type": "String",
+            "Description": "Enter the Private Subnet 02 ID"
+        },
+		"ECSUISecurityGroup": {
+            "Type": "String",
+            "Description": "Enter the ECS Security Group"
+        },
+		"Tenant": {
+			"Type": "String",
+			"Description": "Enter the tenant/country key",
+			"Default": "os-kfc-in",
+			"MaxLength": 9,
+			"MinLength": 9
+		}
+	},
+	"Resources": {
+		"httpapiloggroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+                "LogGroupName": {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-http-api-gateway"
+                },
+                "RetentionInDays": 14
+            }
+        },
+		"httpAPI": {
+		  "Type" : "AWS::ApiGatewayV2::Api",
+		  "Properties" : {
+			  "Description" : "API Gateway for OLO UI",
+			  "Name" : { "Fn::Sub": "orderserv-${Environment}-${Tenant}-olo-ui" } ,
+			  "ProtocolType" : "HTTP",
+			  "Tags": {
+				"Name" : { "Fn::Sub": "orderserv-${Environment}-${Tenant}-olo-ui" } , 
+				"AppName" : { "Fn::Join": ["-",
+										[{"Ref": "AppName"} ,
+										"ui"]]},
+				"Environment" : {"Ref" : "Environment"},
+				"Tenant": { "Ref": "Tenant" }
+				}
+			}
+			
+		},
+		"UIVPCLink" : {
+		  "Type" : "AWS::ApiGatewayV2::VpcLink",
+		  "Properties" : {
+			  "Name" : { "Fn::Sub": "orderserv-${Environment}-${Tenant}-ui-vpclink" },
+			  "SecurityGroupIds" : [{"Ref" : "ECSUISecurityGroup"}],
+			  "SubnetIds" : [{"Ref" : "PrivateSubnet01"},{"Ref" : "PrivateSubnet02"}],
+			  "Tags": {
+				"Name" : { "Fn::Sub": "orderserv-${Environment}-${Tenant}-ui-vpclink" } , 
+							"AppName" : { "Fn::Join": ["-",
+										[{"Ref": "AppName"} ,
+										"ui"]]},
+							"Environment" : {"Ref" : "Environment"},
+							"Tenant": { "Ref": "Tenant" }
+				}
+			}
+		},
+		"UIRoute": {
+			"Type": "AWS::ApiGatewayV2::Route",
+			"DependsOn" : ["httpAPI","UIALBIntegration"],
+			"Properties": {
+				"ApiId": {
+					"Ref": "httpAPI"
+				},
+				"RouteKey": "$default",
+				"Target": {
+					"Fn::Join": [
+						"/",
+						[
+							"integrations",
+							{
+								"Ref": "UIALBIntegration"
+							}
+						]
+					]
+				}
+			}
+		},
+		"UIALBIntegration": {
+			"Type": "AWS::ApiGatewayV2::Integration",
+			"DependsOn" : ["httpAPI","UIVPCLink"],
+			"Properties": {
+			  "ApiId": {
+				"Ref": "httpAPI"
+			  },
+			  "ConnectionId" :  { "Ref" : "UIVPCLink"},
+			  "ConnectionType" : "VPC_LINK",
+			  "Description": "HTTP integration with orderserv UI ALB",
+			  "IntegrationType": "HTTP_PROXY",
+			  "IntegrationMethod": "ANY",
+			  "RequestParameters" : {"overwrite:path" : "$request.path"},
+			  "IntegrationUri": { "Ref" : "ALBListenerARN"},
+			  "PayloadFormatVersion": "1.0"
+			}
+		  },
+		"UIStage" : {
+		  "Type" : "AWS::ApiGatewayV2::Stage",
+		  "DependsOn" : ["httpAPI","httpapiloggroup"],
+		  "Properties" : {
+			  "ApiId" : { "Ref" : "httpAPI"},
+			  "AutoDeploy" : true,
+			  "Description" : "Stage for API deployment",
+			  "StageName" : "api",
+            "AccessLogSettings": {
+                "DestinationArn": { "Fn::GetAtt" : [ "httpapiloggroup", "Arn" ]},
+                "Format": "{\"requestId\":\"$context.requestId\", \"ip\": \"context.identity.sourceIp\", \"requestTime\":\"$context.requestTime\", \"httpMethod\":\"$context.httpMethod\",\"routeKey\":\"$context.routeKey\", \"status\":\"$context.status\",\"protocol\":\"$context.protocol\", \"responseLength\":\"$context.responseLength\"}"			
+            },
+			 "Tags": {
+				"Name" : { "Fn::Sub": "orderserv-${Environment}-${Tenant}-ui-api-stage" } , 
+				"AppName" : { "Fn::Join": ["-",
+										[{"Ref": "AppName"} ,
+										"ui"]]},
+				"Environment" : {"Ref" : "Environment"},
+				"Tenant": { "Ref": "Tenant" }
+				}
+			}
+		}	
+	}
+	
+}

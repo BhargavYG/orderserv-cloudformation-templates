@@ -1,0 +1,1904 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "AWS CloudFormation Template for Master ECS Services",
+    "Parameters": {
+		"VpcId":{
+            "Type":"AWS::EC2::VPC::Id",
+            "Description":"Select the Production VPC vpc-0c6fbcb000001072f."
+        },
+        "TGStackName": {
+            "Type": "String",
+            "Description": "Enter the Stack Name of Service-TargetGroups"
+        },
+        "TDStackname":{
+            "Type": "String",
+			"Description": "Enter the Stack Name of Task Definitions"
+        },
+		"PrivateSubnet01": {
+            "Type": "String",
+            "Description": "Enter the Private Subnet 01 ID"
+        },
+		"PrivateSubnet02": {
+            "Type": "String",
+            "Description": "Enter the Private Subnet 02 ID"
+        },
+		"ECSSecurityGroup": {
+            "Type": "String",
+            "Description": "Enter the ECS Security Group"
+        },
+		"ECSUISecurityGroup": {
+            "Type": "String",
+            "Description": "Enter the ECS UI Security Group"
+        },
+		"ECSCCSecurityGroup": {
+            "Type": "String",
+			"Default": "dummy-sg-when-no-value",
+            "Description": "Enter the ECS Call Center Security Group"
+        },
+		"secretID" :{
+			"Type": "String",
+			"Default": "development/gitlabtoken-qjgcc0",
+            "Description": "Enter the Gitlab Secret ID"		
+		},
+		"ECRAcntID" :{
+			"Type": "String",
+			"Default": "971757624067",
+            "Description": "Enter the ECR account ID"		
+		},
+		"Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"Tenant": {
+			"Type": "String",
+			"Description": "Enter the tenant/country key",
+			"Default": "os-kfc-in",
+			"MaxLength": 9,
+			"MinLength": 9
+		},
+		"AppName": {
+			"Type": "String",
+			"Default": "orderserv",
+			"Description": "Application Name"
+		},
+		"NestStackBucketName": {
+			"Type": "String",
+			"Default": "orderserv-cloudformation-stack-bucket",
+			"Description": "Name of the S3 bucket where Nest CFTs and Lambda zip files are placed"
+		},
+		"NestStackBucketNameENVPrefix": {
+			"Type": "String",
+			"Default": "DEV",
+			"Description": "Enter the Name of ENV as PROD",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"TenantRolePolicyStackName" :{
+			"Type": "String",
+            "Description": "Enter the TenantRolePolicyStackName"		
+		}
+    },
+	"Conditions": {
+        "IsIndTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-in"
+            ]
+        },
+		"IsAusTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-au"
+            ]
+        },	
+		"IsNotAusTenant": {
+            "Fn::Not": [{
+               "Fn::Equals" : [
+					{
+						"Ref": "Tenant"
+					},
+					"os-kfc-au"
+            ]
+			}]
+        },
+		"IsJapTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-jp"
+            ]
+        },
+		"IsThaTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-th"
+            ]
+        }
+    },
+    "Resources": {
+		"ecsCluster": {
+            "Type": "AWS::ECS::Cluster",
+			"DependsOn" : ["privateDNSnamespace"],
+            "Properties": {
+                "ClusterName": {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-ecs"
+                },
+				"ClusterSettings" : [{
+					  "Name" : "containerInsights",
+					  "Value" : "enabled"
+					}],
+				"Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-ecs" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }}
+                ]
+            }
+        },
+		"privateDNSnamespace" :
+		{
+		  "Type" : "AWS::ServiceDiscovery::PrivateDnsNamespace",
+		  "Properties" : {
+			  "Description" : "Private DNS Namespace for Service Discovery",
+			  "Name" : {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-pvt-dns-ns"
+                },
+			  "Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-pvt-dns-ns" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }}
+                ],
+			  "Vpc" : {
+				   "Ref" : "VpcId"
+				 }
+			}
+		},
+		"appmesh":{
+		  "Type": "AWS::AppMesh::Mesh",
+		  "Properties": {
+			"MeshName": {
+                    "Fn::Sub": "orderserv-${Environment}-${Tenant}-app-mesh"
+                },
+			"Spec": {
+			  "EgressFilter": {
+				"Type": "ALLOW_ALL"
+			  }
+			},
+			"Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-pvt-dns-ns" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }}
+                ]
+		  }
+		},
+		"ORDERSERVSTOREOPS":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster","appmesh"],
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservstoreops/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+					"Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				},
+				"AppMeshName" :{
+					"Fn::GetAtt" : [ "appmesh", "MeshName" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVRECOMGMT":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservrecomgmt/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				},
+				"AppMeshName" :{
+					"Fn::GetAtt" : [ "appmesh", "MeshName" ] 
+				}				
+				}
+			}
+		},
+		"ORDERSERVCUSTOMERMGMT":
+		{
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservcustomermgmt/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				},
+				"AppMeshName" :{
+					"Fn::GetAtt" : [ "appmesh", "MeshName" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVCUSTOMERORDHIST":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservcustomerordhist/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				},
+				"AppMeshName" :{
+					"Fn::GetAtt" : [ "appmesh", "MeshName" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVORDERMGMTSVC":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservordermgmtsvc/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				},
+				"AppMeshName" :{
+					"Fn::GetAtt" : [ "appmesh", "MeshName" ] 
+				}
+				}
+			}
+		},		
+		"ORDERSERVTAXCONFIGSVC":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "Condition" : "IsIndTenant",
+		   "DependsOn" : ["ecsCluster"],
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservtaxconfigsvc/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				},
+				"AppMeshName" :{
+					"Fn::GetAtt" : [ "appmesh", "MeshName" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVJPTAXCONFIGSVC":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "Condition" : "IsJapTenant",
+		   "DependsOn" : ["ecsCluster"],
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservjptaxconfigsvc/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				},
+				"AppMeshName" :{
+					"Fn::GetAtt" : [ "appmesh", "MeshName" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVBASKETMGMT":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservbasketmgmt/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				},
+				"AppMeshName" :{
+					"Fn::GetAtt" : [ "appmesh", "MeshName" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVADDITNLCHRGSSVC":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservadditnlchrgssvc/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVCOUPNWALTMGMT":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservcoupnwaltmgmt/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				},
+				"AppMeshName" :{
+					"Fn::GetAtt" : [ "appmesh", "MeshName" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVMENUMASTER":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservmenumaster/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				},
+				"AppMeshName" :{
+					"Fn::GetAtt" : [ "appmesh", "MeshName" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVPRDTSMGMT":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservprdtsmgmt/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				},
+				"AppMeshName" :{
+					"Fn::GetAtt" : [ "appmesh", "MeshName" ] 
+				}
+				}
+			}
+		},		
+		"ORDERSERVPAYMTSVC":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "Condition" : "IsIndTenant",
+		   "DependsOn" : ["ecsCluster"],
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservpaymtsvc/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				},
+				"AppMeshName" :{
+					"Fn::GetAtt" : [ "appmesh", "MeshName" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVOLOUI":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservoloui/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSUISecurityGroup": {
+					"Ref" : "ECSUISecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVOLOINTEGRATION":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservolointegration/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSUISecurityGroup": {
+					"Ref" : "ECSUISecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVPROMTNSVC":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservpromtnsvc/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVGIFTCARDSVC":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+		   "Condition" : "IsIndTenant",
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservgiftcardsvc/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				},
+				"AppMeshName" :{
+					"Fn::GetAtt" : [ "appmesh", "MeshName" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVJPGIFTCARDSVC":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+		   "Condition" : "IsJapTenant",
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservgiftcardsvc/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				},
+				"AppMeshName" :{
+					"Fn::GetAtt" : [ "appmesh", "MeshName" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVALOHAPOSSVC":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+		   "Condition" : "IsIndTenant",
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservalohapossvc/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVPROMTNWEBAPI":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+		   "Condition" : "IsNotAusTenant",
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservpromtnwebapi/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				},
+				"AppMeshName" :{
+					"Fn::GetAtt" : [ "appmesh", "MeshName" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVCUSTORCHESTRTN":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservcustorchestrtn/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				},
+				"AppMeshName" :{
+					"Fn::GetAtt" : [ "appmesh", "MeshName" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVLSRSAPPHIREPOSSVC":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+		   "Condition" : "IsIndTenant",
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservlsrsapphirepossvc/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVDILPOSSVC":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+		   "Condition" : "IsIndTenant",
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservdilpossvc/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVALOHAOEPOSSVC":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+		   "Condition" : "IsAusTenant",
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservalohaoepossvc/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVTHMWRPOSSVC":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+		   "Condition" : "IsThaTenant",
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservthmwrpossvc/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVTHALOHAOEPOSSVC":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+		   "Condition" : "IsThaTenant",
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservalohaoepossvc/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVCBOHPOSSVC":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+		   "Condition" : "IsJapTenant",
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservcbohpossvc/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVDELIVRYPRTNRSVC":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+		   "Condition" : "IsAusTenant",
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservdelivryprtnrsvc/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVTHDELIVRYPRTNRSVC":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+		   "Condition" : "IsThaTenant",
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservdelivryprtnrsvc/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVJPDELIVRYPRTNRSVC":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+		   "Condition" : "IsJapTenant",
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservdelivryprtnrsvc/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVAUPAYMTSVC":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "Condition" : "IsAusTenant",
+		   "DependsOn" : ["ecsCluster"],
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservaupaymtsvc/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				},
+				"AppMeshName" :{
+					"Fn::GetAtt" : [ "appmesh", "MeshName" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVJPPAYMTSVC":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "Condition" : "IsJapTenant",
+		   "DependsOn" : ["ecsCluster"],
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservjppaymtsvc/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				},
+				"AppMeshName" :{
+					"Fn::GetAtt" : [ "appmesh", "MeshName" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVTHPAYMTSVC":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "Condition" : "IsThaTenant",
+		   "DependsOn" : ["ecsCluster"],
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservthpaymtsvc/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				},
+				"AppMeshName" :{
+					"Fn::GetAtt" : [ "appmesh", "MeshName" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVGSTCUSTMGMT":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservgstcustmgmt/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				},
+				"AppMeshName" :{
+					"Fn::GetAtt" : [ "appmesh", "MeshName" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVCALLCENTER":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+		   "Condition" : "IsIndTenant",
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservcallcenter/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSCCSecurityGroup": {
+					"Ref" : "ECSCCSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				},
+				"AppMeshName" :{
+					"Fn::GetAtt" : [ "appmesh", "MeshName" ] 
+				}
+				}
+			}
+		},
+		"ORDERSERVDELDRAGTAILSVC":
+        {
+           "Type" : "AWS::CloudFormation::Stack",
+		   "DependsOn" : ["ecsCluster"],
+		   "Condition" : "IsJapTenant",
+           "Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservdeldragtailsvc/ECS-Services.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ECSClusterName" :{
+				   "Ref" : "ecsCluster"
+				 },
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TGStackName": {
+				   "Ref" : "TGStackName"
+				},
+				"TDStackname":{
+					"Ref" : "TDStackname"
+				},
+				"PrivateSubnet01": {
+					"Ref" : "PrivateSubnet01"
+				},
+				"PrivateSubnet02": {
+					"Ref" : "PrivateSubnet02"
+				},
+				"ECSSecurityGroup": {
+					"Ref" : "ECSSecurityGroup"
+				},
+				"Environment" : {
+					"Ref" : "Environment"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"AppName": {
+					"Ref" : "AppName"
+				},
+				"TenantRolePolicyStackName" :{
+					"Ref" : "TenantRolePolicyStackName"
+				},
+				"NamespaceId" :{
+					 "Fn::GetAtt" : [ "privateDNSnamespace", "Id" ] 
+				}
+				}
+			}
+		}
+	},
+	"Outputs": {
+        "ecsCluster": {
+            "Value": {
+                "Ref": "ecsCluster"
+            }
+        },
+        "ecsClsuterARN": {
+            "Value": {
+                "Fn::Join": [
+                    "",
+                    [{
+                        "Fn::GetAtt": [
+                            "ecsCluster",
+                            "Arn"
+                        ]
+                    }]
+                ]
+            }
+        }
+    }
+}
+

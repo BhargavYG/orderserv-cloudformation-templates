@@ -1,0 +1,395 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "OrderServ Redis Cloudformation Template", 
+	"Parameters" : {
+		"Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"MultiAZ": {
+             "Type": "String",
+             "Description": "Need to enable MultiAZ ",
+	         "Default" : "true",
+             "AllowedValues" : ["true","false"]
+        },
+		"RedisNodeType": {
+            "Default": "cache.t2.small",
+            "AllowedValues" : ["cache.t2.micro", "cache.t2.small", "cache.t2.medium", "cache.t3.micro", "cache.t3.small", "cache.t3.medium", "cache.t4g.micro", "cache.t4g.small", "cache.t4g.medium"],
+            "Description": "Redis instance class",
+            "Type": "String",
+            "ConstraintDescription": "Must select a valid Redis instance type."
+        },
+		"OloRedisNodeType": {
+            "Default": "cache.t2.micro",
+            "AllowedValues" : ["cache.t2.micro", "cache.t2.small", "cache.t2.medium", "cache.t3.micro", "cache.t3.small", "cache.t3.medium", "cache.t4g.micro", "cache.t4g.small", "cache.t4g.medium"],
+            "Description": "Olo Redis instance class",
+            "Type": "String",
+            "ConstraintDescription": "Must select a valid Redis instance type."
+        },
+		"OrderservVPCSecurityGroup":{
+			"Type": "String",
+			"Description": "Enter the Redis SecurityGroup ID name for orderserv"
+		},
+		"OloVPCSecurityGroup":{
+			"Type": "String",
+			"Description": "Enter the Redis SecurityGroup ID name for olo"
+		},
+		"PrivateSubnet01": {
+            "Type": "AWS::EC2::Subnet::Id",
+            "Description": "Select a private subnet in AZ-1 in the VPC"
+        },
+        "PrivateSubnet02": {
+            "Type": "AWS::EC2::Subnet::Id",
+            "Description": "Select a private subnet in AZ-2 in the VPC"
+        },
+		"Tenant": {
+			"Type": "String",
+			"Description": "Enter the tenant/country key",
+			"Default": "os-kfc-in",
+			"MaxLength": 9,
+			"MinLength": 9
+		},
+		"AppName": {
+            "Type": "String",
+            "Default": "orderserv",
+            "Description": "Application Name"
+        }
+	},
+	"Conditions": {
+        "IsIndTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-in"
+            ]
+        },
+		"IsAusTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-au"
+            ]
+        },
+		"IsJapTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-jp"
+            ]
+        },
+		"IsThaTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-th"
+            ]
+        }		
+	},
+	"Resources": {
+		"OloParameterGroup": {
+        "Type": "AWS::ElastiCache::ParameterGroup",
+		"Properties": {
+            "Description": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-olo-parameter-group" },
+			"CacheParameterGroupFamily": "redis6.x",
+			"Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-olo-parameter-group" } }, 
+						{"Key": "AppName", "Value": {"Fn::Join" : ["-",[{ "Ref": "AppName" },"ui"]]}},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+				]
+			}
+		},
+		"OloSubnetGroup": {
+			"Type" : "AWS::ElastiCache::SubnetGroup",
+			"Properties" : {
+				"CacheSubnetGroupName" : { "Fn::Sub": "orderserv-${Environment}-${Tenant}-olo-subnet-group" },
+				"Description" : "Subnet group for Redis",
+				"SubnetIds" : [
+					{"Ref": "PrivateSubnet01"},
+                    {"Ref": "PrivateSubnet02"}
+				],
+				"Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-olo-subnet-group" } }, 
+						{"Key": "AppName", "Value": {"Fn::Join" : ["-",[{ "Ref": "AppName" },"ui"]]}},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+				]
+			}
+		},
+		"OrderservParameterGroup": {
+        "Type": "AWS::ElastiCache::ParameterGroup",
+		"Condition": "IsAusTenant",
+		"Properties": {
+            "Description": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-parameter-group" },
+			"CacheParameterGroupFamily": "redis6.x",
+			"Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-parameter-group" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+				]
+			}
+		},
+		"OrderservJPParameterGroup": {
+        "Type": "AWS::ElastiCache::ParameterGroup",
+		"Condition": "IsJapTenant",
+		"Properties": {
+            "Description": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-parameter-group" },
+			"CacheParameterGroupFamily": "redis6.x",
+			"Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-parameter-group" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+				]
+			}
+		},
+		"OrderservTHParameterGroup": {
+        "Type": "AWS::ElastiCache::ParameterGroup",
+		"Condition": "IsThaTenant",
+		"Properties": {
+            "Description": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-parameter-group" },
+			"CacheParameterGroupFamily": "redis6.x",
+			"Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-parameter-group" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+				]
+			}
+		},
+		"OrderservSubnetGroup": {
+			"Type" : "AWS::ElastiCache::SubnetGroup",
+			"Condition": "IsAusTenant",
+			"Properties" : {
+				"CacheSubnetGroupName" : { "Fn::Sub": "orderserv-${Environment}-${Tenant}-subnet-group" },
+				"Description" : "Subnet group for Redis",
+				"SubnetIds" : [
+					{"Ref": "PrivateSubnet01"},
+                    {"Ref": "PrivateSubnet02"}
+				],
+				"Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-subnet-group" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+				]
+			}
+		},
+		"OrderservJPSubnetGroup": {
+			"Type" : "AWS::ElastiCache::SubnetGroup",
+			"Condition": "IsJapTenant",
+			"Properties" : {
+				"CacheSubnetGroupName" : { "Fn::Sub": "orderserv-${Environment}-${Tenant}-subnet-group" },
+				"Description" : "Subnet group for Redis",
+				"SubnetIds" : [
+					{"Ref": "PrivateSubnet01"},
+                    {"Ref": "PrivateSubnet02"}
+				],
+				"Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-subnet-group" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+				]
+			}
+		},
+		"OrderservTHSubnetGroup": {
+			"Type" : "AWS::ElastiCache::SubnetGroup",
+			"Condition": "IsThaTenant",
+			"Properties" : {
+				"CacheSubnetGroupName" : { "Fn::Sub": "orderserv-${Environment}-${Tenant}-subnet-group" },
+				"Description" : "Subnet group for Redis",
+				"SubnetIds" : [
+					{"Ref": "PrivateSubnet01"},
+                    {"Ref": "PrivateSubnet02"}
+				],
+				"Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-subnet-group" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+				]
+			}
+		},
+		"OloRedisCluster" :
+		{
+		  "Type" : "AWS::ElastiCache::ReplicationGroup",
+		  "DependsOn": [
+                "OloParameterGroup",
+				"OloSubnetGroup"
+          ],
+		  "Properties" : {
+			  "AutomaticFailoverEnabled" : true,
+			  "AutoMinorVersionUpgrade" : true,
+			  "CacheNodeType" : {
+                    "Ref": "OloRedisNodeType"
+              },
+			  "CacheParameterGroupName": { 
+				"Ref" : "OloParameterGroup" 
+			  }, 
+			  "CacheSubnetGroupName" : { 
+				"Ref" : "OloSubnetGroup" 
+			  },
+			  "Engine" : "redis",
+			  "EngineVersion" : "6.2",
+			  "MultiAZEnabled" : { 
+				"Ref": "MultiAZ" 
+			  },
+			  "NumCacheClusters" : "2",
+			  "Port" : "6379",
+			  "PreferredMaintenanceWindow" : "mon:21:30-mon:22:30",
+			  "ReplicationGroupDescription" : "Redis cache for olo",
+			  "ReplicationGroupId" : { "Fn::Sub": "orderserv-${Environment}-${Tenant}-olo-Redis-Cache" },
+			  "SecurityGroupIds" : [
+				{"Ref" :"OloVPCSecurityGroup"}
+			  ],
+			  "SnapshotRetentionLimit" : "1",
+			  "SnapshotWindow" : "20:00-21:00",
+			  "Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-${Tenant}-olo-Redis-Cache" } }, 
+						{"Key": "AppName", "Value": {"Fn::Join" : ["-",[{ "Ref": "AppName" },"ui"]]}},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}						
+			  ]			 				
+			}
+		},
+		"OrderservRedisCluster" :
+		{
+		  "Type" : "AWS::ElastiCache::ReplicationGroup",
+		  "Condition": "IsAusTenant",
+		  "DependsOn": [
+                "OrderservParameterGroup",
+				"OrderservSubnetGroup"
+          ],
+		  "Properties" : {
+			  "AutomaticFailoverEnabled" : true,
+			  "AutoMinorVersionUpgrade" : true,
+			  "CacheNodeType" : {
+                    "Ref": "RedisNodeType"
+              },
+			  "CacheParameterGroupName": { 
+				"Ref" : "OrderservParameterGroup" 
+			  }, 
+			  "CacheSubnetGroupName" : { 
+				"Ref" : "OrderservSubnetGroup" 
+			  },
+			  "Engine" : "redis",
+			  "EngineVersion" : "6.2",
+			  "MultiAZEnabled" : { 
+				"Ref": "MultiAZ" 
+			  },
+			  "NumCacheClusters" : "2",
+			  "Port" : "6379",
+			  "PreferredMaintenanceWindow" : "mon:21:30-mon:22:30",
+			  "ReplicationGroupDescription" : "Redis cache for orderserv",
+			  "ReplicationGroupId" : { "Fn::Sub": "orderserv-${Environment}-${Tenant}-Redis-cache" },
+			  "SecurityGroupIds" : [
+				{"Ref" :"OrderservVPCSecurityGroup"}
+			  ],
+			  "SnapshotRetentionLimit" : "1",
+			  "SnapshotWindow" : "20:00-21:00",
+			  "Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-${Tenant}-Redis-cache" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}						
+			  ]			 				
+			}
+		},
+		"OrderservJPRedisCluster" :
+		{
+		  "Type" : "AWS::ElastiCache::ReplicationGroup",
+		  "Condition": "IsJapTenant",
+		  "DependsOn": [
+                "OrderservJPParameterGroup",
+				"OrderservJPSubnetGroup"
+          ],
+		  "Properties" : {
+			  "AutomaticFailoverEnabled" : true,
+			  "AutoMinorVersionUpgrade" : true,
+			  "CacheNodeType" : {
+                    "Ref": "RedisNodeType"
+              },
+			  "CacheParameterGroupName": { 
+				"Ref" : "OrderservJPParameterGroup" 
+			  }, 
+			  "CacheSubnetGroupName" : { 
+				"Ref" : "OrderservJPSubnetGroup" 
+			  },
+			  "Engine" : "redis",
+			  "EngineVersion" : "6.2",
+			  "MultiAZEnabled" : { 
+				"Ref": "MultiAZ" 
+			  },
+			  "NumCacheClusters" : "2",
+			  "Port" : "6379",
+			  "PreferredMaintenanceWindow" : "mon:21:30-mon:22:30",
+			  "ReplicationGroupDescription" : "Redis cache for orderserv",
+			  "ReplicationGroupId" : { "Fn::Sub": "orderserv-${Environment}-${Tenant}-Redis-cache" },
+			  "SecurityGroupIds" : [
+				{"Ref" :"OrderservVPCSecurityGroup"}
+			  ],
+			  "SnapshotRetentionLimit" : "1",
+			  "SnapshotWindow" : "20:00-21:00",
+			  "Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-${Tenant}-Redis-cache" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}						
+			  ]			 				
+			}
+		},
+		"OrderservTHRedisCluster" :
+		{
+		  "Type" : "AWS::ElastiCache::ReplicationGroup",
+		  "Condition": "IsThaTenant",
+		  "DependsOn": [
+                "OrderservTHParameterGroup",
+				"OrderservTHSubnetGroup"
+          ],
+		  "Properties" : {
+			  "AutomaticFailoverEnabled" : true,
+			  "AutoMinorVersionUpgrade" : true,
+			  "CacheNodeType" : {
+                    "Ref": "RedisNodeType"
+              },
+			  "CacheParameterGroupName": { 
+				"Ref" : "OrderservTHParameterGroup" 
+			  }, 
+			  "CacheSubnetGroupName" : { 
+				"Ref" : "OrderservTHSubnetGroup" 
+			  },
+			  "Engine" : "redis",
+			  "EngineVersion" : "6.2",
+			  "MultiAZEnabled" : { 
+				"Ref": "MultiAZ" 
+			  },
+			  "NumCacheClusters" : "2",
+			  "Port" : "6379",
+			  "PreferredMaintenanceWindow" : "mon:21:30-mon:22:30",
+			  "ReplicationGroupDescription" : "Redis cache for orderserv",
+			  "ReplicationGroupId" : { "Fn::Sub": "orderserv-${Environment}-${Tenant}-Redis-cache" },
+			  "SecurityGroupIds" : [
+				{"Ref" :"OrderservVPCSecurityGroup"}
+			  ],
+			  "SnapshotRetentionLimit" : "1",
+			  "SnapshotWindow" : "20:00-21:00",
+			  "Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-${Tenant}-Redis-cache" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}						
+			  ]			 				
+			}
+		}
+	}
+}

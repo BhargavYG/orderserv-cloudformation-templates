@@ -1,0 +1,100 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "AWS CloudFormation Template for ALB Listner Rules",
+    "Parameters":{
+		"ServiceTargetGroupStackName":{
+			"Type": "String",
+			"Description": "Enter the Stack Name of ServiceTargetGroups"
+        },
+		"ListenerArn":{
+			"Type": "String",
+			"Description": "ALB ListenerArn"
+        },
+		"TenantId":{
+			"Type": "String",
+			"Description": "Tenant Id for Request Routing"
+		},
+		"Tenant": {
+			"Type": "String",
+			"Description": "Enter the tenant/country key",
+			"Default": "os-kfc-in",
+			"MaxLength": 9,
+			"MinLength": 9
+		},
+		"NestStackBucketName": {
+			"Type": "String",
+			"Default": "orderserv-cloudformation-stack-bucket",
+			"Description": "Name of the S3 bucket where Nest CFTs and Lambda zip files are placed"
+		},
+		"NestStackBucketNameENVPrefix": {
+			"Type": "String",
+			"Default": "DEV",
+			"Description": "Enter the Name of ENV as PROD",
+			"MaxLength": 4,
+			"MinLength": 2
+		}
+	},
+	"Conditions": {
+        "IsIndTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-in"
+            ]
+        },
+		"IsAusTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-au"
+            ]
+        }
+    },
+	"Resources": {
+		"orderservcustomerordhistTargetGroup":{
+			"Type" : "AWS::CloudFormation::Stack",
+			"Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservcustomerordhist/ALB-Listener-Rules.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ServiceTargetGroupStackName" : {
+					"Ref" : "ServiceTargetGroupStackName"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"TenantId" : {
+					"Ref" : "TenantId"
+				},
+				"ListenerArn": {
+					"Ref" : "ListenerArn"
+				}
+				}
+			}
+		},
+		"orderservordermgmtsvcTargetGroup":{
+			"Type" : "AWS::CloudFormation::Stack",
+			"Properties" : {
+              "TemplateURL" : {"Fn::Sub" : "https://s3.amazonaws.com/${NestStackBucketName}/${NestStackBucketNameENVPrefix}/TenantMaster/${Tenant}/orderservordermgmtsvc/ALB-Listener-Rules.json"},              
+              "TimeoutInMinutes" : "60",              
+              "Parameters" :{
+				"ServiceTargetGroupStackName" : {
+					"Ref" : "ServiceTargetGroupStackName"
+				},
+				"Tenant" : {
+					"Ref" : "Tenant"
+				},
+				"TenantId" : {
+					"Ref" : "TenantId"
+				},
+				"ListenerArn": {
+					"Ref" : "ListenerArn"
+				}
+				}
+			}
+		}
+	}
+}
+		

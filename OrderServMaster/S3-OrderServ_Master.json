@@ -1,0 +1,551 @@
+{
+    "Parameters": {
+        "Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+        "AppName": {
+            "Type": "String",
+            "Default": "orderserv",
+            "Description": "Application Name"
+        },
+		"Tenant": {
+			"Type": "String",
+			"Description": "Enter the tenant/country key",
+			"Default": "all"
+		}
+    },
+    "Resources": {
+        "MenuCatalogBucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "BucketName": {
+                    "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-menu-catalogs-bucket"
+                },
+                "AccessControl": "Private",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-menu-catalogs-bucket"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    },
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+					{
+                        "Key": "Tenant",
+                        "Value": {
+                            "Ref": "Tenant"
+                        }
+                    }
+                ],
+				"CorsConfiguration":{
+					"CorsRules" : [{           
+						"AllowedMethods":["GET","HEAD"],
+						"AllowedOrigins":["*"],
+						"AllowedHeaders":["*"],
+						"MaxAge": 120
+					   }
+					]
+				},
+                "PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": true,
+                    "BlockPublicPolicy": true,
+                    "IgnorePublicAcls": true,
+                    "RestrictPublicBuckets": true
+                },
+				"BucketEncryption": { 
+					"ServerSideEncryptionConfiguration": [ 
+					{ 
+						"ServerSideEncryptionByDefault": 
+							{	 
+								"SSEAlgorithm": "AES256" 
+							} 
+						} 
+					] 
+				}
+            }
+        },
+        "OLOContentBucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "BucketName": {
+                    "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-olo-content"
+                },
+                "AccessControl": "Private",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-olo-content"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    },
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+					{
+                        "Key": "Tenant",
+                        "Value": {
+                            "Ref": "Tenant"
+                        }
+                    }
+                ],
+				"CorsConfiguration":{
+					"CorsRules" : [{           
+						"AllowedMethods":["GET","HEAD"],
+						"AllowedOrigins":["*"],
+						"AllowedHeaders":["*"],
+						"MaxAge": 120
+					   }
+					]
+				},
+				"PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": true,
+                    "BlockPublicPolicy": true,
+                    "IgnorePublicAcls": true,
+                    "RestrictPublicBuckets": true
+                },
+				"BucketEncryption": { 
+					"ServerSideEncryptionConfiguration": [ 
+					{ 
+						"ServerSideEncryptionByDefault": 
+							{	 
+								"SSEAlgorithm": "AES256" 
+							} 
+						} 
+					] 
+				}
+            }
+        },
+		"NearbyStoreAggBucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "BucketName": {
+                    "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-nearby-store-agg-bucket"
+                },
+                "AccessControl": "Private",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-nearby-store-agg-bucket"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    },
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+					{
+                        "Key": "Tenant",
+                        "Value": {
+                            "Ref": "Tenant"
+                        }
+                    }
+                ],
+				"CorsConfiguration":{
+					"CorsRules" : [{           
+						"AllowedMethods":["GET","HEAD"],
+						"AllowedOrigins":["*"],
+						"AllowedHeaders":["*"],
+						"MaxAge": 120
+					   }
+					]
+				},
+				"PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": true,
+                    "BlockPublicPolicy": true,
+                    "IgnorePublicAcls": true,
+                    "RestrictPublicBuckets": true
+                },
+				"BucketEncryption": { 
+					"ServerSideEncryptionConfiguration": [ 
+					{ 
+						"ServerSideEncryptionByDefault": 
+							{	 
+								"SSEAlgorithm": "AES256" 
+							} 
+						} 
+					] 
+				}
+            }
+        },
+		"LogsBucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "BucketName": {
+                    "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-logs"
+                },
+                "AccessControl": "Private",
+				"LifecycleConfiguration": {
+                    "Rules": [
+                        {
+                            "Id": "PurgeBeyond6months",
+                            "Status": "Enabled",
+                            "ExpirationInDays": 180
+                        }
+                    ]
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-logs"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    },
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+					{
+                        "Key": "Tenant",
+                        "Value": {
+                            "Ref": "Tenant"
+                        }
+                    }
+                ],
+				"PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": true,
+                    "BlockPublicPolicy": true,
+                    "IgnorePublicAcls": true,
+                    "RestrictPublicBuckets": true
+                },
+				"BucketEncryption": { 
+					"ServerSideEncryptionConfiguration": [ 
+					{ 
+						"ServerSideEncryptionByDefault": 
+							{	 
+								"SSEAlgorithm": "AES256" 
+							} 
+						} 
+					] 
+				}
+            }
+        },
+		"EmailNotificationBucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "BucketName": {
+                    "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-email-notification"
+                },
+                "AccessControl": "Private",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-email-notification"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    },
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+					{
+                        "Key": "Tenant",
+                        "Value": {
+                            "Ref": "Tenant"
+                        }
+                    }
+                ],
+				"PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": true,
+                    "BlockPublicPolicy": true,
+                    "IgnorePublicAcls": true,
+                    "RestrictPublicBuckets": true
+                },
+				"BucketEncryption": { 
+					"ServerSideEncryptionConfiguration": [ 
+					{ 
+						"ServerSideEncryptionByDefault": 
+							{	 
+								"SSEAlgorithm": "AES256" 
+							} 
+						} 
+					] 
+				}
+            }
+        },
+		"AssetS3Bucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "BucketName": {
+                    "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-asset"
+                },
+                "AccessControl": "Private",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-asset"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    },
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+					{
+                        "Key": "Tenant",
+                        "Value": {
+                            "Ref": "Tenant"
+                        }
+                    }
+                ],
+				"CorsConfiguration":{
+					"CorsRules" : [{           
+						"AllowedMethods":["GET","HEAD","PUT"],
+						"AllowedOrigins":["*"],
+						"AllowedHeaders":["*"]
+					   }
+					]
+				},
+				"PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": true,
+                    "BlockPublicPolicy": true,
+                    "IgnorePublicAcls": true,
+                    "RestrictPublicBuckets": true
+                },
+				"BucketEncryption": { 
+					"ServerSideEncryptionConfiguration": [ 
+					{ 
+						"ServerSideEncryptionByDefault": 
+							{	 
+								"SSEAlgorithm": "AES256" 
+							} 
+						} 
+					] 
+				}
+            }
+        },
+		"BucketPolicy": {
+            "Type" : "AWS::S3::BucketPolicy",
+			  "Properties" : {
+			  "Bucket" : {"Ref": "LogsBucket"},
+			  "PolicyDocument" : {
+				  "Version": "2012-10-17",
+				  "Statement": [
+					{
+					  "Effect": "Allow",
+					  "Principal": {
+						"AWS": { "Fn::Sub" :"arn:aws:iam::114774131450:root" }
+					  },
+					  "Action": "s3:PutObject",
+					  "Resource": {
+							"Fn::Join": [
+								"",
+								[
+									"arn:aws:s3:::",
+									{
+										"Ref": "LogsBucket"
+									},
+									"/alb/*"
+								]
+							]
+						}
+					},
+					{
+					  "Effect": "Allow",
+					  "Principal": {
+						"Service": "delivery.logs.amazonaws.com"
+					  },
+					  "Action": "s3:PutObject",
+					  "Resource": {
+							"Fn::Join": [
+								"",
+								[
+									"arn:aws:s3:::",
+									{
+										"Ref": "LogsBucket"
+									},
+									"/alb/*"
+								]
+							]
+						},
+					  "Condition": {
+						"StringEquals": {
+						  "s3:x-amz-acl": "bucket-owner-full-control"
+						}
+					  }
+					},
+					{
+					  "Effect": "Allow",
+					  "Principal": {
+						"Service": "delivery.logs.amazonaws.com"
+					  },
+					  "Action": "s3:GetBucketAcl",
+					  "Resource": {
+							"Fn::Join": [
+								"",
+								[
+									"arn:aws:s3:::",
+									{
+										"Ref": "LogsBucket"
+									}
+								]
+							]
+						}
+					},
+					{
+						"Effect":"Deny",
+						"Principal": "*",
+						"Action": [
+							"s3:*"
+						],
+						"Resource" : [
+							{
+								"Fn::Join": [
+									"",
+									[
+										"arn:aws:s3:::",
+										{
+											"Ref": "LogsBucket"
+										}
+									]
+								]
+							},
+							{
+								"Fn::Join": [
+									"",
+									[
+										"arn:aws:s3:::",
+										{
+											"Ref": "LogsBucket"
+										},
+										"/*"
+									]
+								]
+							}
+						],
+						"Condition": {
+							"Bool": {
+							  "aws:SecureTransport": false
+							}
+						}
+					}
+				  ]
+				}
+			}
+        }
+    },
+    "Outputs": {
+        "MenuCatalogBucket": {
+            "Description": "S3 Bucket for menu catalog data",
+            "Value": {
+                "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-menu-catalogs-bucket"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-menu-catalogs-bucket"
+                }
+            }
+        },
+        "OLOContentBucket": {
+            "Description": "S3 Bucket for olo content data",
+            "Value": {
+                "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-olo-content"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-olo-content"
+                }
+            }
+        },
+		"NearbyStoreAggBucket": {
+            "Description": "S3 Bucket for Nearby store data",
+            "Value": {
+                "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-nearby-store-agg-bucket"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-nearby-store-agg-bucket"
+                }
+            }
+        },
+		"LogsBucket": {
+            "Description": "S3 Bucket for Logs",
+            "Value": {
+                "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-logs"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-logs"
+                }
+            }
+        },
+		"EmailNotificationBucket": {
+            "Description": "S3 Bucket for Email Notification data",
+            "Value": {
+                "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-email-notification"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-email-notification"
+                }
+            }
+        },
+		"AssetS3Bucket": {
+            "Description": "S3 Bucket for Asset data",
+            "Value": {
+                "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-asset"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-asset"
+                }
+            }
+        }
+    }
+}

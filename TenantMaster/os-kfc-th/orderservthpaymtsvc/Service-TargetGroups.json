@@ -1,0 +1,77 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "AWS CloudFormation Template for Service Target Groups",
+    "Parameters":{
+        "VpcId":{
+			"Type":"AWS::EC2::VPC::Id",
+			"Description":"Select the VPC"
+        },
+        "Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/prod",
+			"AllowedValues" : ["dev","perf","qa","uat","prod","pen"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"AppName": {
+            "Type": "String",
+            "Default": "orderserv",
+            "Description": "Application Name"
+        },
+		"Tenant": {
+			"Type": "String",
+			"Description": "Enter the tenant/country key",
+			"Default": "os-kfc-th",
+			"MaxLength": 9,
+			"MinLength": 9
+		}
+    },
+    "Resources": {
+        "orderservthpaymtsvcTargetGroup": {
+            "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+            "Properties": {
+                 "Name" : { "Fn::Sub": "os-${Environment}-${Tenant}-tg-thpaymtsvc" },
+                 "Protocol" : "HTTP",
+                 "Port" : 80,
+                 "TargetType" : "ip",
+                 "VpcId" : {"Ref" : "VpcId"},
+                 "HealthCheckProtocol" : "HTTP",
+                 "HealthCheckPath" : "/health",
+                 "HealthCheckPort": "traffic-port",
+                 "HealthyThresholdCount" : 5,
+                 "UnhealthyThresholdCount" : 2,
+                 "HealthCheckTimeoutSeconds" : 60,
+                 "HealthCheckIntervalSeconds" : 120,
+                 "Matcher" : {
+                    "HttpCode" : "200"
+                },
+				"Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-tg-thpaymtsvc" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+                ]
+            }
+        }       
+    },
+    "Outputs": {
+		  "ServiceTargetGroupStackName": {
+			"Description": "ServiceTargetGroupStackName",
+            "Value": {
+                "Fn::Sub": "${AWS::StackName}"
+            }
+        },
+        "orderservthpaymtsvcTargetGroup": {
+            "Description": "Jap Payment Service Target group",
+            "Value": {
+                "Ref": "orderservthpaymtsvcTargetGroup"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orderservthpaymtsvcTargetGroup"
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,147 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description" :  "Stack to create Parameter store. It will be of format <environment>/<tenant>/",
+    "Parameters":{
+		"Tenant": {
+			"Type": "String",
+			"Description": "Enter the tenant/country key",
+			"Default": "os-kfc-in",
+			"MaxLength": 9,
+			"MinLength": 9
+		},
+		"Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"AppName": {
+			"Type": "String",
+			"Default": "order-serv",
+			"Description": "Application Name"
+		},
+		"TenantRolePolicyStackName" :{
+			"Type": "String",
+			"Default": "TenantRolePolicyStackName",
+			"Description": "Stack Name for the TenantRolePolicy"			
+		}
+	},
+	"Conditions": {
+        "IsIndTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-in"
+            ]
+        },
+		"IsAusTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-au"
+            ]
+        },
+		"IsJapTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-jp"
+            ]
+        },
+		"IsThaTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-th"
+            ]
+        }
+	},
+	"Resources": {
+		"SYSPARAMPROD001" : {
+		  "Type" : "AWS::SSM::Parameter",
+		  "Properties" : {
+			"Name" : {
+			  "Fn::Sub" : "/${Environment}/${Tenant}/imageversion"
+			},
+			"Type" : "String",
+			"Value" : {
+			  "Fn::Sub" : "1.00"
+			}
+		  }
+		},
+		"SYSPARAMPROD002" : {
+		  "Type" : "AWS::SSM::Parameter",
+		  "Properties" : {
+			"Name" : {
+			  "Fn::Sub" : "/${Environment}/${Tenant}/androidversion"
+			},
+			"Type" : "String",
+			"Value" : {
+			  "Fn::Sub" : "1.0.0"
+			}
+		  }
+		},
+		"SYSPARAMPROD003" : {
+		  "Type" : "AWS::SSM::Parameter",
+		  "Properties" : {
+			"Name" : {
+			  "Fn::Sub" : "/${Environment}/${Tenant}/iosversion"
+			},
+			"Type" : "String",
+			"Value" : {
+			  "Fn::Sub" : "1.0.0"
+			}
+		  }
+		},
+        "SYSPARAMPROD004": {
+            "Type": "AWS::SSM::Parameter",
+			"Condition": "IsAusTenant",
+            "Properties": {
+                "Name": {
+                    "Fn::Sub": "/${Environment}/${Tenant}/appconfig"
+                },
+                "Type": "String",
+                "Value": "[{\"key\":\"accountdashboardpreviousordercount\",\"value\":32},{\"key\":\"orderstatusnotifications\",\"value\":false},{\"key\":\"cateringmaxorderfuturedaycount\",\"value\":7},{\"key\":\"cateringminorderdaycount\",\"value\":24},{\"key\":\"mobilecontactlessdeliveryenabled\",\"value\":true},{\"key\":\"mobilehiddenmenuname\",\"value\":\"FOMO WOW\"},{\"key\":\"mobilesecretmenuname\",\"value\":\"secret-menu\"},{\"key\":\"secretmenutime\",\"value\":11},{\"key\":\"storelocatormaxreturncount\",\"value\":10},{\"key\":\"buffertimepmpickup\",\"value\":30},{\"key\":\"buffertimepmdelivery\",\"value\":30},{\"key\":\"secondarycontact\",\"value\": \"\" },{\"key\":\"market_threshold\",\"value\":0},{\"key\":\"iosmajorversion\",\"value\":\"5.0.0\"},{\"key\":\"iosminorversion\",\"value\":\"5.0.0\"}, {\"key\":\"androidmajorversion\",\"value\":\"0.0.0\"},{\"key\":\"androidminorversion\",\"value\":\"4.0.0\"},{\"key\":\"carryout_completed\",\"value\":\"test:test\"},{\"key\":\"imageVersion\",\"value\":\"1.0.0\"}]"
+            }
+        },
+		"SYSPARAMPROD005": {
+            "Type": "AWS::SSM::Parameter",
+			"Condition": "IsIndTenant",
+            "Properties": {
+                "Name": {
+                    "Fn::Sub": "/${Environment}/${Tenant}/appconfig"
+                },
+                "Type": "String",
+                "Value": "[{\"key\":\"iosmajorversion\",\"value\":\"1.0.0\"},{\"key\":\"iosminorversion\",\"value\":\"1.0.0\"},{\"key\":\"androidmajorversion\",\"value\":\"1.0.0\"},{\"key\":\"androidminorversion\",\"value\":\"1.0.0\"}]"
+            }
+        },
+		"SYSPARAMPROD006": {
+            "Type": "AWS::SSM::Parameter",
+			"Condition": "IsJapTenant",
+            "Properties": {
+                "Name": {
+                    "Fn::Sub": "/${Environment}/${Tenant}/appconfig"
+                },
+                "Type": "String",
+                "Value": "[{\"key\":\"accountdashboardpreviousordercount\",\"value\":32},{\"key\":\"orderstatusnotifications\",\"value\":false},{\"key\":\"cateringmaxorderfuturedaycount\",\"value\":7},{\"key\":\"cateringminorderdaycount\",\"value\":24},{\"key\":\"mobilecontactlessdeliveryenabled\",\"value\":true},{\"key\":\"mobilehiddenmenuname\",\"value\":\"FOMO WOW\"},{\"key\":\"mobilesecretmenuname\",\"value\":\"secret-menu\"},{\"key\":\"secretmenutime\",\"value\":11},{\"key\":\"storelocatormaxreturncount\",\"value\":10},{\"key\":\"buffertimepmpickup\",\"value\":30},{\"key\":\"buffertimepmdelivery\",\"value\":30}]"
+            }
+        },
+		"SYSPARAMPROD007": {
+            "Type": "AWS::SSM::Parameter",
+			"Condition": "IsThaTenant",
+            "Properties": {
+                "Name": {
+                    "Fn::Sub": "/${Environment}/${Tenant}/appconfig"
+                },
+                "Type": "String",
+                "Value": "[{\"key\":\"accountdashboardpreviousordercount\",\"value\":32},{\"key\":\"orderstatusnotifications\",\"value\":false},{\"key\":\"cateringmaxorderfuturedaycount\",\"value\":7},{\"key\":\"cateringminorderdaycount\",\"value\":24},{\"key\":\"mobilecontactlessdeliveryenabled\",\"value\":true},{\"key\":\"mobilehiddenmenuname\",\"value\":\"FOMO WOW\"},{\"key\":\"mobilesecretmenuname\",\"value\":\"secret-menu\"},{\"key\":\"secretmenutime\",\"value\":11},{\"key\":\"storelocatormaxreturncount\",\"value\":40},{\"key\":\"buffertimepmpickup\",\"value\":30},{\"key\":\"buffertimepmdelivery\",\"value\":30}]"
+            }
+        }
+	}
+}

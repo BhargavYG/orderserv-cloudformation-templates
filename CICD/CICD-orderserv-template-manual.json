@@ -1,0 +1,249 @@
+
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "CICD template for OrderServ",
+    "Parameters":{
+		"RepoName":{
+			"Type":"String",
+			"Default": "orderserv-storeops",
+			"Description":"Enter the CodeCommit/ECR Repo Name."
+		},
+		"PipelineName":{
+			"Type":"String",
+			"Default": "orderserv-storeops",
+			"Description":"Enter the name of the CodePipeline."
+		},
+		"ECSCluster":{
+			"Type":"String",
+			"Description":"Enter the ECS Cluster Name"
+		},
+		"BRANCHNAME":{
+			"Type":"String",
+			"Default": "master",
+			"Description":"master branch"
+		},
+		"AppName": {
+			"Type": "String",
+			"Default": "orderserv",
+			"Description": "Application Name"
+		},
+		"CICDPolicyStackName" :{
+			"Type": "String",
+			"Default": "CICDPolicyStack",
+			"Description": "Stack Name for the CICDPolicy"
+		},
+		"Environment" :{
+			"Type": "String",
+			"Description": "Environment Name",
+			"Default" : "dev"
+		},
+		"Tenant": {
+			"Type": "String",
+			"Description": "Enter the tenant/country key",
+			"Default": "os-kfc-in",
+			"MaxLength": 9,
+			"MinLength": 9
+		},
+		"ArtifactBucketName": {
+			"Type": "String",
+			"Default": "orderserv-s3-artifacts-bucket",
+			"Description": "Name of the S3 bucket where Nest CFTs and Lambda zip files are placed"
+		},
+		"AccountID": {
+			"Type": "String",
+			"Default": "971757624067",
+			"Description": "Enter the account ID"
+		}
+	},
+	"Resources": {
+		"CodeBuild": {
+			"Type": "AWS::CodeBuild::Project",
+			"Properties": {
+				"Name": {
+				    "Ref": "PipelineName"
+				},
+				"ServiceRole": {
+					"Fn::ImportValue": {
+						"Fn::Sub": "${CICDPolicyStackName}-CodeBuildRoleRoleARN"
+						}
+					},
+				"Artifacts": {
+					"Type": "CODEPIPELINE"
+				},
+				"Source": {
+					"Type": "CODEPIPELINE"
+				},
+				"Environment": {
+					"ComputeType": "BUILD_GENERAL1_SMALL",
+					"Image": "aws/codebuild/amazonlinux2-x86_64-standard:3.0",
+					"Type": "LINUX_CONTAINER",
+					"PrivilegedMode": true,
+					"EnvironmentVariables": [
+						{
+							"Name": "AWS_ACCOUNT_ID",
+							"Value": {
+								"Ref": "AccountID"
+							}
+						},
+						{
+							"Name": "AWS_DEFAULT_REGION",
+							"Value": { "Fn::Sub": "${AWS::Region}" }
+						},
+						{
+							"Name": "IMAGE_REPO_NAME",
+							"Value": {
+								"Ref": "RepoName"
+							}
+						},
+						{
+							"Name": "BRANCH_NAME",
+							"Value": {
+								"Ref": "BRANCHNAME"
+							}
+						},
+						{
+							"Name": "CONTAINER_NAME",
+							"Value": {
+								"Ref": "RepoName"
+							}
+						},
+						{
+						  "Name": "PARAM_STORE_IMG_VERSION_PREFIX",
+						  "Value": {
+							"Ref": "Environment"
+						  }
+						},
+						{
+						  "Name": "TENANT",
+						  "Value": {
+							"Ref": "Tenant"
+						  }
+						}
+					]
+				},
+				"TimeoutInMinutes": 60,
+				"Tags": [
+					{
+						"Key": "Name",
+						"Value": {
+								"Ref": "PipelineName"
+							}
+					},
+					{
+						"Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+					}
+				]
+			}
+		},
+		"CodePipeline": {
+			"Type": "AWS::CodePipeline::Pipeline",
+			"Properties": {
+				"Name": {
+				    "Ref": "PipelineName"
+				},
+				"RoleArn": {
+					"Fn::ImportValue": {
+						"Fn::Sub": "${CICDPolicyStackName}-CodePipelineRoleARN"
+						}
+					},
+				"ArtifactStore": {
+					"Type": "S3",
+					"Location": {
+						"Ref": "ArtifactBucketName"
+					}
+				},
+				"Stages": [
+					{
+						"Name": "Source",
+						"Actions": [
+							{
+								"Name": "App",
+								"ActionTypeId": {
+									"Category": "Source",
+									"Owner": "AWS",
+									"Version": 1,
+									"Provider": "CodeCommit"
+								},
+								"Configuration": {
+									"PollForSourceChanges": false,
+									"BranchName": {
+										"Ref": "BRANCHNAME"
+									},
+									"RepositoryName": {
+										"Ref": "RepoName"
+									}
+								},
+								"OutputArtifacts": [
+									{
+										"Name": "App"
+									}
+								],
+								"RunOrder": 1
+							}
+						]
+					},
+					{
+						"Name": "Build",
+						"Actions": [
+							{
+								"Name": "Build",
+								"ActionTypeId": {
+									"Category": "Build",
+									"Owner": "AWS",
+									"Version": 1,
+									"Provider": "CodeBuild"
+								},
+								"Configuration": {
+									"ProjectName": {
+										"Ref": "PipelineName"
+									}
+								},
+								"InputArtifacts": [
+									{
+										"Name": "App"
+									}
+								],
+								"OutputArtifacts": [
+									{
+										"Name": "BuildOutput"
+									}
+								],
+								"RunOrder": 1
+							}
+						]
+					},
+					{
+						"Name": "Deploy",
+						"Actions": [
+							{
+								"Name": "Deploy",
+								"ActionTypeId": {
+									"Category": "Deploy",
+									"Owner": "AWS",
+									"Version": 1,
+									"Provider": "ECS"
+								},
+								"Configuration": {
+									"ClusterName": {
+										"Ref": "ECSCluster"
+									},
+									"ServiceName": {"Fn::Sub": "${RepoName}-service"},
+									"FileName": { "Fn::Sub": "${RepoName}/imagedefinitions.json" }
+								},
+								"InputArtifacts": [
+									{
+										"Name": "BuildOutput"
+									}
+								],
+								"RunOrder": 1
+							}
+						]
+					}
+				]
+			}
+		}
+	}
+}

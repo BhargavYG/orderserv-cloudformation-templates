@@ -1,0 +1,47 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "AWS CloudFormation Template for ALB listners Rules of ${Tenant}",
+    "Parameters":{
+		"ServiceTargetGroupStackName":{
+			"Type": "String",
+			"Description": "Enter the Stack Name of ServiceTargetGroups"
+        },
+		"ListenerArn":{
+			"Type": "String",
+			"Description": "ALB ListenerArn"
+        },
+		"Tenant": {
+			"Type": "String",
+			"Description": "Enter the tenant/country key",
+			"Default": "os-kfc-in",
+			"MaxLength": 9,
+			"MinLength": 9
+		}
+	},
+	"Resources": {
+		"orderservcallcenterTargetGroupListenerRule":{
+			"Type":"AWS::ElasticLoadBalancingV2::ListenerRule",
+			"Properties":{
+				 "Actions":[
+				{
+					 "Type":"forward",
+					 "TargetGroupArn":{"Fn::ImportValue" :  {"Fn::Sub": "${ServiceTargetGroupStackName}-orderservcallcenterTargetGroup"} } 
+				}
+				],
+				 "Conditions":[
+				  {
+					 "Field":"path-pattern",
+					 "PathPatternConfig" : {
+						 "Values" : ["/*"]
+					 }
+				 }
+				],
+			 "ListenerArn":{
+                   "Ref": "ListenerArn"
+                },
+			 "Priority": 1
+			}
+        }
+	}
+}
+		

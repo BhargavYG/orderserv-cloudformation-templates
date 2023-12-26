@@ -1,0 +1,308 @@
+{
+    "Parameters": {
+        "Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+        "AppName": {
+            "Type": "String",
+            "Default": "order-serv",
+            "Description": "Application Name"
+        },
+		"KMSMasterKeyID": {
+            "Type": "String",
+            "Default": "mrk-f725693a8543480598e836751441aea3",
+            "Description": "Enter KMSMasterKeyID"
+		},
+		"Tenant": {
+			"Type": "String",
+			"Description": "Enter the tenant/country key",
+			"Default": "os-kfc-in",
+			"MaxLength": 9,
+			"MinLength": 9
+		}
+    },
+    "Resources": {
+		"ExportReportS3Bucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "BucketName": {
+                    "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-${Tenant}-export-reports"
+                },
+                "AccessControl": "Private",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-${Tenant}-export-reports"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    },
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    }
+                ],
+				"PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": true,
+                    "BlockPublicPolicy": true,
+                    "IgnorePublicAcls": true,
+                    "RestrictPublicBuckets": true
+                },
+				"LifecycleConfiguration": {
+                "Rules": [
+						{
+							"Id": "deleteuploadedobjects",
+							"Status": "Enabled",
+							"ExpirationInDays": 2
+						}
+					]
+				},
+				"BucketEncryption": { 
+					"ServerSideEncryptionConfiguration": [ 
+					{ 
+						"ServerSideEncryptionByDefault": 
+							{	 
+								"SSEAlgorithm": "AES256" 
+							} 
+						} 
+					] 
+				}
+            }			
+        },
+		"OrdersS3Bucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "BucketName": {
+                    "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-${Tenant}-orders"
+                },
+				"BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": [
+                        {
+							"BucketKeyEnabled" : true,
+                            "ServerSideEncryptionByDefault": {
+                                "SSEAlgorithm": "aws:kms",
+							"KMSMasterKeyID": {
+								"Fn::Sub": "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${KMSMasterKeyID}"
+							}
+                            }
+                        }
+                    ]
+                },
+                "AccessControl": "Private",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-${Tenant}-orders"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    },
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    }
+                ],
+				"PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": true,
+                    "BlockPublicPolicy": true,
+                    "IgnorePublicAcls": true,
+                    "RestrictPublicBuckets": true
+                }
+            }
+        },
+		"AdminUIS3Bucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "BucketName": {
+                    "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-${Tenant}-admin-ui"
+                },
+                "PublicAccessBlockConfiguration": {
+					"BlockPublicAcls" : true,
+					"BlockPublicPolicy" : true,
+					"IgnorePublicAcls" : true,
+					"RestrictPublicBuckets" : true
+				},
+				"LoggingConfiguration": {
+                    "DestinationBucketName": {
+						"Fn::Sub": "orderserv-${AWS::Region}-${Environment}-logs"
+					},
+                    "LogFilePrefix": "s3-access-logs"
+                },
+				"BucketEncryption": { 
+					"ServerSideEncryptionConfiguration": [ 
+					{ 
+						"ServerSideEncryptionByDefault": 
+							{	 
+								"SSEAlgorithm": "AES256" 
+							} 
+						} 
+					] 
+				},
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-${Tenant}-admin-ui"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    },
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    }
+                ]
+            }
+        },
+		"BucketPolicy": {
+            "Type": "AWS::S3::BucketPolicy",
+			"DependsOn": "CFOriginAccessIdentity",
+            "Properties": {
+                "PolicyDocument": {
+                    "Id": "s3Policy",
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Sid": "PolicyForCloudFrontPrivateContent",
+                            "Effect": "Allow",
+                            "Principal": {
+                                "CanonicalUser": {
+                                    "Fn::GetAtt": [
+                                        "CFOriginAccessIdentity",
+                                        "S3CanonicalUserId"
+                                    ]
+                                }
+                            },
+                            "Action": "s3:GetObject",
+                            "Resource": {
+                                "Fn::Join": [
+                                    "",
+                                    [
+                                        "arn:aws:s3:::",
+                                        {
+                                            "Ref": "AdminUIS3Bucket"
+                                        },
+                                        "/*"
+                                    ]
+                                ]
+                            }
+                        },
+						{
+							"Effect":"Deny",
+							"Principal": "*",
+							"Action": [
+								"s3:PutObject"
+							],
+							"Resource" : [
+								{
+									"Fn::Join": [
+										"",
+										[
+											"arn:aws:s3:::",
+											{
+												"Ref": "AdminUIS3Bucket"
+											},
+											"/*"
+										]
+									]
+								}
+							],
+							"Condition": {
+								"Bool": {
+								  "aws:SecureTransport": false
+								}
+							}
+						}
+					]
+                },
+                "Bucket": {
+                    "Ref": "AdminUIS3Bucket"
+                }
+            }
+        },
+		"CFOriginAccessIdentity": {
+			"Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
+			"DependsOn": [
+				"AdminUIS3Bucket"
+			],
+			"Properties": {
+				"CloudFrontOriginAccessIdentityConfig": {
+					"Comment": {
+						"Fn::Sub": "orderserv-${AWS::Region}-${Environment}-${Tenant}-admin-ui-access-identity"
+					}
+				}
+			}
+		}
+    },
+    "Outputs": {
+		"ExportReportS3Bucket": {
+            "Description": "S3 Bucket for tenant data",
+            "Value": {
+                "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-${Tenant}-export-reports"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-export-reports"
+                }
+            }
+        },
+		"OrdersS3Bucket": {
+            "Description": "S3 Bucket for tenant data",
+            "Value": {
+                "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-${Tenant}-orders"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-orders"
+                }
+            }
+        },
+		"AdminUIS3Bucket": {
+            "Description": "S3 Bucket for admin UI",
+            "Value": {
+                "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-${Tenant}-admin-ui"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-admin-ui"
+                }
+            }
+        },
+		"CFOAI": {
+            "Description": "OAI for Admin UI",
+            "Value": {
+                "Ref": "CFOriginAccessIdentity"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-admin-ui-oai"
+                }
+            }
+        }
+    }
+}

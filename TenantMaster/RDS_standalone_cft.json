@@ -1,0 +1,203 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "AWS CloudFormation for creating an Amazon MySQL RDS DB instance",
+
+    "Parameters": {
+        "Tenant": {
+            "Type": "String",
+            "Description": "Enter the tenant/country key",
+            "Default": "os-kfc-au",
+            "MaxLength": 9,
+            "MinLength": 9
+        },
+        "Environment" : {
+            "Type" : "String",
+            "Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+            "AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+            "Default" : "dev",
+            "MaxLength": 4,
+            "MinLength": 2
+        },
+        "AppName": {
+            "Type": "String",
+            "Default": "order-serv",
+            "Description": "Application Name"
+        },
+        "port": {
+            "Type": "String",
+            "Default": "3306",
+            "Description": "port number"
+        },
+        "VPCSecurityGroupIds": {
+            "Type": "String",
+            "Description": "Comma delimited VPC SecurityGroupIds",
+	        "Default" : "sg-030c19c6a6c98e68e"
+        },
+        "VPCSubnetgroup": {
+             "Type": "String",
+             "Description": "Comma delimited VPC SubnetIds",
+	         "Default" : "default-vpc-0b3b02f0266412af1"
+        },
+        "MultiAZ": {
+             "Type": "String",
+             "Description": "Need to enable MultiAZ ",
+	         "Default" : "false",
+             "AllowedValues" : ["true","false"]
+        },
+        "DBInstanceClass": {
+            "Default": "db.t3.small",
+            "AllowedValues" : ["db.t3.small","db.t3.micro","db.t3.medium","db.t3.large","db.t3.xlarge","db.t3.2xlarge","db.t2.small","db.t2.micro","db.t2.medium","db.t2.large","db.t2.xlarge","db.t2.2xlarge"],
+            "Description": "DB instance class",
+            "Type": "String",
+            "ConstraintDescription": "Must select a valid DB instance type."
+        },
+        "DBAllocatedStorage": {
+            "Default": "20",
+            "Description": "The size of the database (GiB)",
+            "Type": "Number",
+            "MinValue": "20",
+            "MaxValue": "1024",
+
+            "ConstraintDescription": "must be between 20 and 65536 GiB."
+        },
+        "DBUsername": {
+            "NoEcho": "true",
+            "Description": "Username for MySQL database access",
+            "Type": "String",
+            "MinLength": "1",
+            "MaxLength": "16",
+            "AllowedPattern": "[a-zA-Z][a-zA-Z0-9]*",
+            "ConstraintDescription": "must begin with a letter and contain only alphanumeric characters."
+        },
+
+        "DBPassword": {
+            "NoEcho": "true",
+            "Description": "Password MySQL database access",
+            "Type": "String",
+            "MinLength": "8",
+            "MaxLength": "41",
+            "AllowedPattern": "[a-zA-Z0-9]*",
+            "ConstraintDescription": "must contain only alphanumeric characters."
+        }
+    },
+	"Mappings" : {
+	  "TenantMap" : {
+			"os-kfc-in" : {
+			  "Tenantshort" : "kfcin"
+			},
+			"os-kfc-au" : {
+			  "Tenantshort" : "kfcau"
+			}
+		}	
+	},
+    "Resources": {
+        "MySQLRDS": {
+            "Type": "AWS::RDS::DBInstance",
+            "Properties": {
+                "DBInstanceIdentifier": {
+                  "Fn::Sub" : ["Orderserv${Environment}${Tenantshort}DBInstance",{"Tenantshort" : {"Fn::FindInMap":["TenantMap",{"Ref":"Tenant"},"Tenantshort"]}}]
+                },
+
+                "DBName": {
+                    "Fn::Sub" : ["orderserv${Environment}${Tenantshort}DB",{"Tenantshort" : {"Fn::FindInMap":["TenantMap",{"Ref":"Tenant"},"Tenantshort"]}}]
+                },
+                "DBInstanceClass": {
+                    "Ref": "DBInstanceClass"
+                },
+                "AllocatedStorage": {
+                    "Ref": "DBAllocatedStorage"
+                },
+                "Engine": "MySQL",
+                "EngineVersion": "8.0.21",
+                "MasterUsername": {
+
+                    "Ref": "DBUsername"
+                },
+                "MasterUserPassword": {
+                    "Ref": "DBPassword"
+
+                },
+                "Tags": [
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub" : "${Environment}-${Tenant}-RDS"
+                        }
+                    },
+                   {
+                        "Key": "Tenant",
+                        "Value": {
+                            "Fn::Sub" : "${Tenant}"
+                        }
+                    },
+                    {
+                        "Key": "AppName",
+                        "Value": {
+                            "Ref": "AppName"
+                        }
+                    }
+                ],
+                "DeletionProtection" : true,
+                "EnableIAMDatabaseAuthentication" : false,
+                "VPCSecurityGroups" : [{
+                    
+                     "Ref": "VPCSecurityGroupIds"
+                }],
+                "DBSubnetGroupName" : {
+                    
+                     "Ref": "VPCSubnetgroup"
+                },
+                "PubliclyAccessible" : false,
+                "StorageEncrypted" : true,
+                "AutoMinorVersionUpgrade" : true,
+                "CopyTagsToSnapshot" : true,
+                "EnableCloudwatchLogsExports" : [ "error", "slowquery" ],
+                "OptionGroupName" : "default:mysql-8-0",
+                "Port" : {
+                    
+                     "Ref": "port"
+                },
+                "PreferredBackupWindow" : "15:08-15:38",
+                "PreferredMaintenanceWindow" : "wed:16:48-wed:17:18",
+                "BackupRetentionPeriod" : 1,
+                "MultiAZ" : {
+                    
+                     "Ref": "MultiAZ"
+                }
+
+
+            }
+        }
+    },
+    "Outputs": {
+        "ConnectionString": {
+            "Description": "connection string for the database",
+            "Value": {
+                "Fn::Join": [
+                    "",
+                    [
+                        {
+                            "Fn::GetAtt": [
+                                "MySQLRDS",
+                                "Endpoint.Address"
+                            ]
+                        },
+                        ":",
+                        {
+                            "Fn::GetAtt": [
+                                "MySQLRDS",
+                                "Endpoint.Port"
+                            ]
+                        }
+                    ]
+                ]
+            }
+        }
+    }
+}

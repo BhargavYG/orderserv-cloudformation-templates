@@ -1,0 +1,89 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "OrderServ Kinesis Cloudformation Template", 
+	"Parameters": {
+        "Environment": {
+            "Type": "String",
+            "Description": "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+            "AllowedValues": ["dev","perf","qa","uat","prod","pen","dr"],
+            "Default": "dev",
+            "MaxLength": 4,
+            "MinLength": 2
+        },
+        "Tenant": {
+            "Type": "String",
+            "Description": "Enter the tenant/country key",
+            "Default": "os-kfc-in",
+            "MaxLength": 9,
+            "MinLength": 9
+        },
+        "AppName": {
+            "Type": "String",
+            "Default": "orderserv",
+            "Description": "Application Name"
+        },
+        "KMSMasterKeyID": {
+            "Type": "String",
+            "Default": "61a85317-dc53-414c-a455-4e22b6c2a08e",
+            "Description": "Enter Tenant Specific KMSMasterKeyID"
+        }
+    },
+	"Conditions": {
+        "IsIndTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-in"
+            ]
+        },
+		"IsAusTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-au"
+            ]
+        },
+		"IsJapTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-jp"
+            ]
+        },
+		"IsThaTenant": {
+            "Fn::Equals": [
+                {
+                    "Ref": "Tenant"
+                },
+                "os-kfc-th"
+            ]
+        }
+	},
+	"Resources": {
+		"ATOWEBHOOKKiNESIS" : {
+			"Type" : "AWS::Kinesis::Stream",
+			"Condition" : "IsAusTenant",
+			"Properties" : {
+				"Name" : {"Fn::Sub": "orderserv-${Environment}-${Tenant}-atostream"},
+				"StreamModeDetails" : { "StreamMode" : "PROVISIONED"},
+				"ShardCount" : 5,				
+				 "StreamEncryption" :
+				 {	
+					"EncryptionType" : "KMS",
+					"KeyId": {
+								"Fn::Sub": "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${KMSMasterKeyID}"
+							}
+				 },
+				"Tags" : [
+					{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${Environment}-${Tenant}-atostream" } }, 
+					{"Key": "AppName", "Value": { "Ref": "AppName" }},
+					{"Key": "Environment", "Value": { "Ref": "Environment" }},
+					{"Key": "Tenant", "Value": { "Ref": "Tenant" }}
+				]
+			}
+		}
+	}
+}

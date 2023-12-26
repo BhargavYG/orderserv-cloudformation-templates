@@ -1,0 +1,377 @@
+{
+   "AWSTemplateFormatVersion":"2010-09-09",
+   "Description":"Stack to create Master Role Policy",
+   "Parameters":{
+      "Environment":{
+         "Type":"String",
+         "Description":"Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+         "AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+         "Default":"dev",
+         "MaxLength":4,
+         "MinLength": 2
+      },
+      "AppName":{
+         "Type":"String",
+         "Default":"order-serv",
+         "Description":"Application Name"
+      }
+   },
+   "Resources":{
+      "GenericCloudWatchLogsRole":{
+         "Type":"AWS::IAM::Role",
+         "Properties":{
+            "RoleName":{
+               "Fn::Sub":"orderserv-${AWS::Region}-${Environment}-CloudWatchLogsRole"
+            },
+            "AssumeRolePolicyDocument":{
+               "Version":"2012-10-17",
+               "Statement":[
+                  {
+                     "Effect":"Allow",
+                     "Principal":{
+                        "Service":[
+                           "vpc-flow-logs.amazonaws.com"
+                        ]
+                     },
+                     "Action":[
+                        "sts:AssumeRole"
+                     ]
+                  }
+               ]
+            },
+            "Policies":[
+               {
+                  "PolicyName":{
+                     "Fn::Sub":"orderserv-${Environment}-CloudwatchLogsPolicy"
+                  },
+                  "PolicyDocument":{
+                     "Version":"2012-10-17",
+                     "Statement":[
+                        {
+                           "Effect":"Allow",
+                           "Action":[
+                              "logs:CreateLogGroup",
+                              "logs:CreateLogStream",
+                              "logs:DescribeLogGroups",
+                              "logs:DescribeLogStreams",
+                              "logs:PutLogEvents",
+                              "logs:GetLogEvents",
+                              "logs:FilterLogEvents"
+                           ],
+                           "Resource":{
+                              "Fn::Sub":"arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:*"
+                           }
+                        },
+                        {
+                           "Effect":"Allow",
+                           "Action":[
+                              "iam:PassRole"
+                           ],
+                           "Resource":[
+                              {
+                                 "Fn::Sub":"arn:aws:iam::${AWS::AccountId}:role/orderserv-${AWS::Region}-${Environment}-CloudWatchLogsRole"
+                              }
+                           ]
+                        }
+                     ]
+                  }
+               }
+            ],
+            "Tags":[
+               {
+                  "Key":"Name",
+                  "Value":{
+                     "Fn::Sub":"orderserv-${AWS::Region}-${Environment}-ApiGatewayCloudWatchLogsRole"
+                  }
+               },
+               {
+                  "Key":"AppName",
+                  "Value":{
+                     "Ref":"AppName"
+                  }
+               },
+               {
+                  "Key":"Environment",
+                  "Value":{
+                     "Ref":"Environment"
+                  }
+               }
+            ]
+         }
+      },
+	  "NLBALBLambdaRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+				"RoleName" : { "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-NLBALBLambdaRole" },
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "lambda.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "Path": "/",
+                "Policies": [
+                    {
+                        "PolicyName": { "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-NLBALBLambdaPolicy" } ,
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+								{
+									"Effect": "Allow",
+                                    "Action": [
+                                        "cloudwatch:PutMetricData"
+                                    ],
+                                      "Resource": "*"
+                                },
+								{
+									"Effect": "Allow",
+									"Action": [
+											"logs:CreateLogStream",
+											"logs:CreateLogGroup",
+											"logs:PutLogEvents"
+									],
+									"Resource": [
+										{ "Fn::Sub":"arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*"}
+									]
+								},
+								{
+									"Effect": "Allow",
+									"Action": [
+										"s3:DeleteObject",
+										"s3:PutObject",
+										"s3:GetObject"
+									],
+									"Resource": [
+										{ "Fn::Sub":"arn:aws:s3:::orderserv-${AWS::Region}-${Environment}-nlb-alb-ip/*"}
+									]
+								},
+								{
+									"Effect": "Allow",
+									"Action": [
+										"elasticloadbalancing:DeregisterInstancesFromLoadBalancer",
+										"elasticloadbalancing:RegisterInstancesWithLoadBalancer"										
+									],
+									"Resource": [
+										{ "Fn::Sub":"arn:aws:elasticloadbalancing:${AWS::Region}:${AWS::AccountId}:loadbalancer/net/orderserv-${Environment}-*"}
+									]
+								},
+								{
+									"Action": [
+										"elasticloadbalancing:RegisterTargets",
+										"elasticloadbalancing:DeregisterTargets"
+									],
+									"Resource": [
+										{ "Fn::Sub":"arn:aws:elasticloadbalancing:${AWS::Region}:${AWS::AccountId}:targetgroup/orderserv-${Environment}-*"}
+									],
+									"Effect": "Allow"
+								},
+								{
+									"Action": [
+										"elasticloadbalancing:DescribeTargetHealth"
+									],
+									"Resource": [
+										"*"
+									],
+									"Effect": "Allow"
+								},
+								{
+									"Action": [
+										"ec2:CreateNetworkInterfacePermission",
+										"ec2:CreateNetworkInterface",
+										"ec2:DescribeNetworkInterfaces",
+										"ec2:DeleteNetworkInterface",
+										"ec2:DeleteNetworkInterfacePermission"
+									],
+									"Resource": ["*"],
+									"Effect": "Allow"
+								}
+                            ]
+                        }
+                    }
+                ],
+				"Tags": [
+						{"Key": "Name", "Value": { "Fn::Sub": "orderserv-${AWS::Region}-${Environment}-NLBALBLambdaRole" } }, 
+						{"Key": "AppName", "Value": { "Ref": "AppName" }},
+						{"Key": "Environment", "Value": { "Ref": "Environment" }},
+						{"Key": "Tenant", "Value": "all"}
+				]
+            }
+        },
+	"AkamaiS3GetObjectLogsRole":{
+         "Type":"AWS::IAM::Role",
+         "Properties":{
+            "RoleName":{
+               "Fn::Sub":"orderserv-${AWS::Region}-${Environment}-apigw-akamaiS3Get-role"
+            },
+            "AssumeRolePolicyDocument":{
+               "Version":"2012-10-17",
+               "Statement":[
+                  {
+                     "Effect":"Allow",
+                     "Principal":{
+                        "Service":[
+                           "apigateway.amazonaws.com"
+                        ]
+                     },
+                     "Action":[
+                        "sts:AssumeRole"
+                     ]
+                  }
+               ]
+            },
+            "Policies":[
+               {
+                  "PolicyName":{
+                     "Fn::Sub":"orderserv-${Environment}-akamai-s3-getobject-policy"
+                  },
+                  "PolicyDocument":{
+                     "Version":"2012-10-17",
+                     "Statement":[
+                        {
+                           "Effect":"Allow",
+                           "Action":[
+                              "s3:GetObject"
+                           ],
+                           "Resource":{
+                              "Fn::Sub":"arn:aws:s3:::orderserv-${AWS::Region}-${Environment}-olo-content/akamai/*"
+                           }
+                        }
+                     ]
+                  }
+               }
+            ],
+            "Tags":[
+               {
+                  "Key":"Name",
+                  "Value":{
+                     "Fn::Sub":"orderserv-${AWS::Region}-${Environment}-apigw-akamaiS3Get-role"
+                  }
+               },
+               {
+                  "Key":"AppName",
+                  "Value":{
+                     "Ref":"AppName"
+                  }
+               },
+               {
+                  "Key":"Environment",
+                  "Value":{
+                     "Ref":"Environment"
+                  }
+               }
+            ]
+         }
+      
+   },
+   "APIGWLambdaAuthRole":{
+         "Type":"AWS::IAM::Role",
+         "Properties":{
+            "RoleName":{
+               "Fn::Sub":"orderserv-${AWS::Region}-${Environment}-apigw-lambda-role"
+            },
+            "AssumeRolePolicyDocument":{
+               "Version":"2012-10-17",
+               "Statement":[
+                  {
+                     "Effect":"Allow",
+                     "Principal":{
+                        "Service":[
+                           "apigateway.amazonaws.com"
+                        ]
+                     },
+                     "Action":[
+                        "sts:AssumeRole"
+                     ]
+                  }
+               ]
+            },
+            "Policies":[
+               {
+                  "PolicyName":{
+                     "Fn::Sub":"orderserv-${Environment}-apigw-lambda-invoke-policy"
+                  },
+                  "PolicyDocument":{
+                     "Version":"2012-10-17",
+                     "Statement":[
+                        {
+                           "Effect":"Allow",
+                           "Action": "lambda:InvokeFunction",
+                           "Resource": "*"
+                        }
+                     ]
+                  }
+               }
+            ],
+            "Tags":[
+               {
+                  "Key":"Name",
+                  "Value":{
+                     "Fn::Sub":"orderserv-${AWS::Region}-${Environment}-apigw-lambda-role"
+                  }
+               },
+               {
+                  "Key":"AppName",
+                  "Value":{
+                     "Ref":"AppName"
+                  }
+               },
+               {
+                  "Key":"Environment",
+                  "Value":{
+                     "Ref":"Environment"
+                  }
+               }
+            ]
+         }
+	 }		 
+   },
+   "Outputs":{
+      "MasterRolePolicyStackName":{
+         "Description":"MasterRolePolicyStackName",
+         "Value":{
+            "Fn::Sub":"${AWS::StackName}"
+         }
+      },
+      "GenericCloudWatchLogsRoleARN":{
+         "Value":{
+            "Fn::GetAtt":[
+               "GenericCloudWatchLogsRole",
+               "Arn"
+            ]
+         },
+         "Export":{
+            "Name":{
+               "Fn::Sub":"${AWS::StackName}-GenericCloudWatchLogsRoleARN"
+            }
+         }
+      },
+	  "NLBALBLambdaRole": {
+			"Value": {
+				"Ref": "NLBALBLambdaRole"
+			}
+		},
+		"NLBALBLambdaRoleARN": {
+			"Value": {	
+					"Fn::GetAtt": [
+							"NLBALBLambdaRole",
+							"Arn"
+						]
+			},
+			"Export": {
+				"Name": {
+					"Fn::Sub": "${AWS::StackName}-NLBALBLambdaRoleARN"
+				}
+			}
+		}
+   }
+}

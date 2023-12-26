@@ -1,0 +1,205 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "AWS CloudFormation Template for VPC Link",
+	"Parameters": {
+        "basketNlbARN":{
+            "Type":"String",
+            "Description":"ARN of the NLB to be used for the VPC Link"
+        },
+		"orderNlbARN":{
+            "Type":"String",
+            "Description":"ARN of the NLB to be used for the VPC Link"
+        },
+		"storeNlbARN":{
+            "Type":"String",
+            "Description":"ARN of the NLB to be used for the VPC Link"
+        },
+		"paymentNlbARN":{
+            "Type":"String",
+            "Description":"ARN of the NLB to be used for the VPC Link"
+        },
+		"customerNlbARN":{
+            "Type":"String",
+            "Description":"ARN of the NLB to be used for the VPC Link"
+        },
+		"menupromotionNlbARN":{
+            "Type":"String",
+            "Description":"ARN of the NLB to be used for the VPC Link"
+        },
+       "Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		}
+    },
+    "Resources": 
+    {
+    	"basketvpclink": {
+            "Type": "AWS::ApiGateway::VpcLink",
+            "Properties": {
+                "Description": {
+                    "Fn::Sub": "VPC Link for Env-${Environment}-basket"
+                },
+                "Name": {
+                    "Fn::Sub": "orderserv-${Environment}-basket-vpclink"
+                },
+                "TargetArns": [
+                    {
+                        "Ref": "basketNlbARN"
+                    }
+                ]				
+            }
+		},
+		"ordervpclink": {
+            "Type": "AWS::ApiGateway::VpcLink",
+            "Properties": {
+                "Description": {
+                    "Fn::Sub": "VPC Link for Env -${Environment}-order"
+                },
+                "Name": {
+                    "Fn::Sub": "orderserv-${Environment}-order-vpclink"
+                },
+                "TargetArns": [
+                    {
+                        "Ref": "orderNlbARN"
+                    }
+                ]				
+            }
+		},
+		"customervpclink": {
+            "Type": "AWS::ApiGateway::VpcLink",
+            "Properties": {
+                "Description": {
+                    "Fn::Sub": "VPC Link for Env - ${Environment}-customer"
+                },
+                "Name": {
+                    "Fn::Sub": "orderserv-${Environment}-customer-vpclink"
+                },
+                "TargetArns": [
+                    {
+                        "Ref": "customerNlbARN"
+                    }
+                ]				
+            }
+		},
+		"paymentvpclink": {
+            "Type": "AWS::ApiGateway::VpcLink",
+            "Properties": {
+                "Description": {
+                    "Fn::Sub": "VPC Link for Env - ${Environment}-payment"
+                },
+                "Name": {
+                    "Fn::Sub": "orderserv-${Environment}-payment-vpclink"
+                },
+                "TargetArns": [
+                    {
+                        "Ref": "paymentNlbARN"
+                    }
+                ]				
+            }
+		},
+		"storevpclink": {
+            "Type": "AWS::ApiGateway::VpcLink",
+            "Properties": {
+                "Description": {
+                    "Fn::Sub": "VPC Link for Env - ${Environment}-store"
+                },
+                "Name": {
+                    "Fn::Sub": "orderserv-${Environment}-store-vpclink"
+                },
+                "TargetArns": [
+                    {
+                        "Ref": "storeNlbARN"
+                    }
+                ]				
+            }
+		},
+		"menupromotionvpclink": {
+            "Type": "AWS::ApiGateway::VpcLink",
+            "Properties": {
+                "Description": {
+                    "Fn::Sub": "VPC Link for Env - ${Environment}-menupromtn"
+                },
+                "Name": {
+                    "Fn::Sub": "orderserv-${Environment}-menupromtn-vpclink"
+                },
+                "TargetArns": [
+                    {
+                        "Ref": "menupromotionNlbARN"
+                    }
+                ]				
+            }
+		}
+    },
+    "Outputs": {
+        "basketvpclink": {
+            "Description": "Basket VPC Link ID used in APIGateway",
+            "Value": {
+                "Ref": "basketvpclink"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-basketvpclink"
+                }
+            }
+        },
+		"ordervpclink": {
+            "Description": "Order VPC Link ID used in APIGateway",
+            "Value": {
+                "Ref": "ordervpclink"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-ordervpclink"
+                }
+            }
+        },
+		"customervpclink": {
+            "Description": "Customer VPC Link ID used in APIGateway",
+            "Value": {
+                "Ref": "customervpclink"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-customervpclink"
+                }
+            }
+        },
+		"paymentvpclink": {
+            "Description": "Payment VPC Link ID used in APIGateway",
+            "Value": {
+                "Ref": "paymentvpclink"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-paymentvpclink"
+                }
+            }
+        },
+		"storevpclink": {
+            "Description": "Store VPC Link ID used in APIGateway",
+            "Value": {
+                "Ref": "storevpclink"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-storevpclink"
+                }
+            }
+        },
+		"menupromotionvpclink": {
+            "Description": "Menu Promotion VPC Link ID used in APIGateway",
+            "Value": {
+                "Ref": "menupromotionvpclink"
+            },
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-menupromotionvpclink"
+                }
+            }
+        }
+    }
+}

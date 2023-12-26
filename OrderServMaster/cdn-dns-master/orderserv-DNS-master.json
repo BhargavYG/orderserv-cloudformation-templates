@@ -1,0 +1,69 @@
+{
+    "AWSTemplateFormatVersion" : "2010-09-09",
+	"Parameters": {
+		"HostedzoneID" :{
+			"Type": "String",
+			"Description": "HostedzoneID under which the record will be created"
+		},
+		"Environment" : {
+			"Type" : "String",
+			"Description" : "Enter the environment name as dev/qa/perf/uat/sec/prod/dr",
+			"AllowedValues" : ["dev","perf","qa","uat","sec","prod","pen","uat1","dr"],
+			"Default" : "dev",
+			"MaxLength": 4,
+			"MinLength": 2
+		},
+		"OLOAPICDNURL" :{
+			"Type": "String",
+			"Description": "OLOAPICDNURL if already created"
+		},
+		"AssetCDNURL" :{
+			"Type": "String",
+			"Description": "AssetCDNURL if already created"
+		},		
+		"OLOAPIDomainName": {
+			"Type": "String",
+			"Default": "kfc-apac-olo-api",
+			"Description": "OLO API Domain name to form <ENV>.<OLOAPIDomainName>.cognizantorderservnxtgen.com"
+		},
+		"AssetDomainName": {
+			"Type": "String",
+			"Default": "kfc-assets",
+			"Description": "Asset Domain name to form <ENV>.<AssetDomainName>.cognizantorderservnxtgen.com"
+		},
+		"RegisteredDomainName": {
+			"Type": "String",
+			"Default": "cognizantorderservnxtgen.com",
+			"Description": "Enter the Registered Domain name from Route53"
+		}
+	
+	},
+    "Resources" : {
+		"OLOAPIDNSRecord" : {
+		  "Type" : "AWS::Route53::RecordSet",
+		  "Properties" : 
+		  {
+			"HostedZoneId" : {"Ref": "HostedzoneID"},
+			"Name" : { 
+								"Fn::Join": ["",[{"Ref" : "Environment"},"-",{"Ref" : "OLOAPIDomainName"},".",{"Ref" : "RegisteredDomainName"}]]
+							},
+			"Type" : "CNAME",
+			"TTL" : "300",
+			"ResourceRecords" : [ {"Ref": "OLOAPICDNURL"} ]
+		  }
+		},
+		"AssetDNSRecord" : {
+		  "Type" : "AWS::Route53::RecordSet",
+		  "Properties" : 
+		  {
+			"HostedZoneId" : {"Ref": "HostedzoneID"},
+			"Name" : { 
+								"Fn::Join": ["",[{"Ref" : "Environment"},"-",{"Ref" : "AssetDomainName"},".",{"Ref" : "RegisteredDomainName"}]]
+							},
+			"Type" : "CNAME",
+			"TTL" : "300",
+			"ResourceRecords" : [ {"Ref": "AssetCDNURL"} ]
+		  }
+		}
+	}	
+}
